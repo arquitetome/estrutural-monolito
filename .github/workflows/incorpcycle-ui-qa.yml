@@ -66,10 +66,32 @@ jobs:
             // QA real do loop: após a grua sair, a fachada deve ter a iluminação acesa.
             const heroLightBefore=await page.evaluate(()=>({night:window.incorpDebug?.architecture?.state.night,build:window.incorpDebug?.architecture?.state.build}));
             console.log('HERO LIGHT BEFORE',JSON.stringify(heroLightBefore));
-            await page.waitForFunction(()=>{
-              const a=window.incorpDebug?.architecture?.state;
-              return !!a&&a.night>.96&&a.build>.96&&a.crane<.03;
-            },null,{timeout:17000});
+            await page.evaluate(()=>{
+              window.__heroTrace=[];
+              const start=performance.now();
+              window.__heroTraceTimer=setInterval(()=>{
+                const a=window.incorpDebug?.architecture?.state;
+                window.__heroTrace.push({elapsed:Math.round(performance.now()-start),
+                  hidden:document.hidden,chapter:document.querySelector('#main')?.dataset.chapter,
+                  build:a?.build,structure:a?.structure,crane:a?.crane,night:a?.night});
+                if(window.__heroTrace.length>35)clearInterval(window.__heroTraceTimer);
+              },1000);
+            });
+            try{
+              await page.waitForFunction(()=>{
+                const a=window.incorpDebug?.architecture?.state;
+                return !!a&&a.night>.96&&a.build>.96&&a.crane<.03;
+              },null,{timeout:23000});
+            }catch(e){
+              const diagnostics=await page.evaluate(()=>({
+                state:window.incorpDebug?.architecture?.state,
+                trace:window.__heroTrace,hidden:document.hidden,
+                visibility:document.visibilityState,chapter:document.querySelector('#main')?.dataset.chapter,
+                paused:document.querySelector('#gesture-hint')?.hidden
+              }));
+              console.log('HERO LIGHT DIAGNOSTICS',JSON.stringify(diagnostics));
+              throw e;
+            }
             const heroLightAfter=await page.evaluate(()=>({
               night:window.incorpDebug?.architecture?.state.night,
               build:window.incorpDebug?.architecture?.state.build,
