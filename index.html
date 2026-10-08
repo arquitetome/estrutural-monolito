@@ -1332,10 +1332,46 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
   if(g.name==='entry')return state.build<.02;
   return state.build*(state.floorCount+1)<=(g.name==='roof'?state.floorCount:g.floorIndex);
  }
+
+ function syncFloorNumberPosition(vp){
+   const host=document.getElementById('scene-host');
+   const overlay=document.querySelector('.floor-number-overlay:not([hidden])');
+   if(!overlay||!host?.contains(canvas)||!state.floorCount||state.firstPerson)return;
+   const buttons=overlay.querySelectorAll('[data-floor-number]');
+   const bounds=overlay.getBoundingClientRect(),view=canvas.getBoundingClientRect();
+   if(!bounds.width||!bounds.height||!view.width||!view.height)return;
+   const yaw=state.yaw,c=Math.cos(yaw),sin=Math.sin(yaw);
+   const type=state.type;
+   const anchorX=type==='multi'||type==='casas'||type==='logistico'?-11.2:type==='hotel'||type==='comercial'?-10.8:type==='misto'?-11:type==='studios'?-6.7:type==='casa'?-10:-9;
+   const anchorZ=type==='logistico'?6.8:5.5;
+   const count=state.floorCount;
+   const coord=[];
+   for(const button of buttons){
+     const i=Number(button.dataset.floorNumber);
+     if(!Number.isInteger(i)||i<0||i>=count)continue;
+     const localY=.47+i*(type==='logistico'?6:2.55);
+     const x=c*anchorX+sin*anchorZ,z=-sin*anchorX+c*anchorZ,y=localY*(1+state.explode*.68)+1.30;
+     const nx=vp[0]*x+vp[4]*y+vp[8]*z+vp[12];
+     const ny=vp[1]*x+vp[5]*y+vp[9]*z+vp[13];
+     const nw=vp[3]*x+vp[7]*y+vp[11]*z+vp[15];
+     if(!Number.isFinite(nw)||Math.abs(nw)<.001)continue;
+     const left=view.left-bounds.left+(nx/nw+1)*view.width*.5-18;
+     const top=view.top-bounds.top+(1-ny/nw)*view.height*.5;
+     coord.push({button,left:Math.max(48,Math.min(bounds.width-20,left)),top:Math.max(22,Math.min(bounds.height-22,top))});
+   }
+   const ordered=coord.slice().sort((a,b)=>a.top-b.top);
+   for(let i=1;i<ordered.length;i++)ordered[i].top=Math.max(ordered[i].top,ordered[i-1].top+27);
+   const overflow=ordered.length?ordered[ordered.length-1].top-(bounds.height-22):0;
+   if(overflow>0)for(const v of ordered)v.top-=overflow;
+   const under=ordered.length?22-ordered[0].top:0;
+   if(under>0)for(const v of ordered)v.top+=under;
+   for(const v of coord){v.button.style.left=v.left+'px';v.button.style.top=v.top+'px';}
+ }
  function render(){let rect=canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,1.7);let w=Math.max(1,Math.round(rect.width*ratio)),h=Math.max(1,Math.round(rect.height*ratio));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
  let aspect=w/h;let modelHeight=state.type==='complementares'?10:state.type==='interior'?3.5:(configs[state.type]||configs.residencial).height;let lookY=(modelHeight*.36)+state.explode*3.3;let pitch=state.pitch;let eye=[37*Math.cos(pitch),37*Math.sin(pitch)+lookY,43*Math.cos(pitch)];
  let hh=Math.max(state.type==='complementares'?24:40,(state.type==='complementares'?37:55)/aspect)/state.zoom;let vp=M.mul(M.ortho(-hh*aspect/2,hh*aspect/2,-hh/2,hh/2,.1,200),M.look(eye,[-state.floorSlide*4.5,lookY,state.floorSlide*2.5],[0,1,0]));
  if(state.firstPerson){eye=[state.walkX,1.6,state.walkZ];let cos=Math.cos(state.lookPitch),dir=[Math.sin(state.walkYaw)*cos,Math.sin(state.lookPitch),-Math.cos(state.walkYaw)*cos];vp=M.mul(perspective(70*Math.PI/180,aspect,.05,160),M.look(eye,eye.map((x,i)=>x+dir[i]),[0,1,0]));}
+ syncFloorNumberPosition(vp);
  const nextShadowKey=[geometryRevision,state.yaw,state.build,state.structure,state.crane,state.craneLift,state.explode,state.selectedFloor,state.floorSlide,state.onlyFloor,JSON.stringify(state.layers)].join('|');if(nextShadowKey!==shadowKey){gl.bindFramebuffer(gl.FRAMEBUFFER,fb);gl.viewport(0,0,2048,2048);gl.clear(gl.DEPTH_BUFFER_BIT);gl.useProgram(depth);gl.uniformMatrix4fv(U.depth.uVP,false,lightVP);groups.forEach(g=>{if(!g.cast||!isVisible(g))return;if(hiddenByGrowth(g))return;gl.uniformMatrix4fv(U.depth.uModel,false,obj(g));gl.bindVertexArray(g.vao);gl.drawArrays(gl.TRIANGLES,0,g.count);});shadowKey=nextShadowKey;shadowPasses++;}renderedFrames++;
  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,w,h);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(prog);gl.uniformMatrix4fv(U.main.uVP,false,vp);gl.uniformMatrix4fv(U.main.uLight,false,lightVP);gl.uniform3fv(U.main.uEye,eye);gl.uniform1f(U.main.uNight,state.night);gl.uniform1f(U.main.uCut,state.cut);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shadowTex);gl.uniform1i(U.main.uShadowMap,0);
  groups.forEach(g=>{if(!isVisible(g))return;if(hiddenByGrowth(g))return;gl.uniform1f(U.main.uNight,state.night);gl.uniform1f(U.main.uStudio,g.name==='studio'?1:0);gl.uniform1f(U.main.uInterior,state.type==='interior'?1:0);gl.uniform1f(U.main.uFloorPreview,g.name==='floor-detail'&&state.selectedFloor>=0?1:0);gl.uniformMatrix4fv(U.main.uModel,false,obj(g));gl.bindVertexArray(g.vao);gl.drawArrays(gl.TRIANGLES,0,g.count);});
@@ -2260,7 +2296,7 @@ const services=[
  {short:'Vendas',name:'Do interesse à decisão.',tag:'07 · Vendas e estoque',desc:'Organize o atendimento e a disponibilidade das unidades ao longo da comercialização.',items:['Funil de atendimento','Disponibilidade de unidades','Indicadores comerciais'],icon:['people','plan','chart']}
 ];
 function home(){return `<section class="chapter chapter-home" aria-labelledby="home-title"><div class="home-heading"><h1 id="home-title">Seu terreno.<br> <span>Uma nova perspectiva.</span></h1><p>Veja o que construir, quanto pode custar e por onde começar.</p><div class="actions"><button class="button" data-land="hub">Analisar meu terreno</button><button class="text-button" data-chapter="3">Ver a entrega <span aria-hidden="true">›</span></button></div><div class="free">Uma ideia começa aqui, estudo preliminar sem compromisso.</div></div><span class="demo-label"></span></section>`;}
-function possibility(){return `<section class="chapter split-chapter enhanced-possibility" aria-labelledby="possibility-title"><div class="copy"><div class="eyebrow">01. Enxergue as possibilidades.</div><h2 id="possibility-title">Um terreno.<br> Vários caminhos.</h2><p>Explore o empreendimento.<br> Depois, veja cada andar.</p><div class="possibility-options" aria-label="Exemplos de empreendimento">${Object.entries(variants).map(([k,v])=>`<button class="possibility-option" data-variant="${k}" aria-pressed="${state.variant===k}"><span class="radio" aria-hidden="true"></span><span><strong>${v.label}</strong><small>${v.desc}</small></span></button>`).join('')}</div><p class="fine">Modelos conceituais. Usos e dimensões dependem de análise técnica.${state.completed?' <strong>Seus dados já acompanham esta sessão.</strong>':''}</p><button class="legal-link" data-land="legal-report">${ICLand.status().label} ↗</button><button class="text-button" style="font-size:11px;padding:0;min-height:25px" data-land="envelope">Explorar envelope informado ↗</button></div><div class="model-caption"><strong>${variants[state.variant].caption}</strong>${['loteamento','chacaras','desmembramento'].includes(state.variant)?'Desenho didático · lotes sem dimensão legal atribuída.':'Explore o andar selecionado pela lateral.'}</div><div class="floor-explorer interactive" ${['loteamento','chacaras','desmembramento'].includes(state.variant)?'hidden':''}><div class="floor-toolbar"><label for="floor-select">Andar</label><select id="floor-select" aria-label="Selecionar pavimento para inspeção"><option value="-1">Edifício completo</option>${Array.from({length:architecture?.state.floorCount||({casa:2,casas:2,logistico:1,hotel:7,studios:10,misto:6,comercial:6,multi:6}[state.variant]||8)},(_,i)=>`<option value="${i}" ${state.selectedFloor===i?'selected':''}>${i===0?'Térreo':i+'º pavimento'}</option>`).join('')}</select><button class="floor-action" data-action="isolate-floor" aria-pressed="${state.onlyFloor}" ${state.selectedFloor<0?'disabled':''}>${state.onlyFloor?'Ver conjunto':'Isolar andar'}</button></div><div class="floor-offset" ${state.selectedFloor<0?'hidden':''}><label for="floor-offset">Abrir à esquerda</label><input id="floor-offset" type="range" min="0" max="1.25" step="0.01" value="${architecture?.state.floorSlide||1}" aria-label="Abrir pavimento à esquerda"><span>Deslize o pavimento ↔</span></div></div><div class="model-controls interactive"><button class="soft-button" data-action="explode" ${['loteamento','chacaras','desmembramento'].includes(state.variant)?'hidden':''} aria-pressed="${state.explode}">${ico('layers')}<span>${state.explode?'Reunir pavimentos':'Separar pavimentos'}</span></button><button class="soft-button" data-action="night" aria-pressed="${state.night}">${ico('sun')}<span>${state.night?'Apagar luzes':'Acender luzes'}</span></button></div></section>`;}
+function possibility(){return `<section class="chapter split-chapter enhanced-possibility" aria-labelledby="possibility-title"><div class="copy"><div class="eyebrow">01. Enxergue as possibilidades.</div><h2 id="possibility-title">Um terreno.<br> Vários caminhos.</h2><p>Explore o empreendimento.<br> Depois, veja cada andar.</p><div class="possibility-options" aria-label="Exemplos de empreendimento">${Object.entries(variants).map(([k,v])=>`<button class="possibility-option" data-variant="${k}" aria-pressed="${state.variant===k}"><span class="radio" aria-hidden="true"></span><span><strong>${v.label}</strong><small>${v.desc}</small></span></button>`).join('')}</div><p class="fine">Modelos conceituais. Usos e dimensões dependem de análise técnica.${state.completed?' <strong>Seus dados já acompanham esta sessão.</strong>':''}</p><button class="legal-link" data-land="legal-report">${ICLand.status().label} ↗</button><button class="text-button" style="font-size:11px;padding:0;min-height:25px" data-land="envelope">Explorar envelope informado ↗</button></div><div class="model-caption"><strong>${variants[state.variant].caption}</strong><span class="floor-number-help">${['loteamento','chacaras','desmembramento'].includes(state.variant)?'Desenho didático · lotes sem dimensão legal atribuída.':state.explode?'Clique no número à esquerda de cada andar para abri-lo.':'Separe pavimentos para escolher um andar.'}</span></div><div class="floor-number-overlay" aria-label="Seleção de pavimentos" ${state.explode?'':'hidden'}>${Array.from({length:architecture?.state.floorCount||({casa:2,casas:2,logistico:1,hotel:7,studios:10,misto:6,comercial:6,multi:6}[state.variant]||8)},(_,i)=>`<button type="button" data-floor-number="${i}" aria-label="Abrir ${i===0?'térreo':i+'º pavimento'} à esquerda" aria-pressed="${state.selectedFloor===i}" title="${i===0?'Térreo':i+'º pavimento'}">${String(i+1).padStart(2,'0')}</button>`).join('')}</div><div class="model-controls interactive"><button class="soft-button" data-action="explode" ${['loteamento','chacaras','desmembramento'].includes(state.variant)?'hidden':''} aria-pressed="${state.explode}">${ico('layers')}<span>${state.explode?'Reunir pavimentos':'Separar pavimentos'}</span></button><button class="soft-button" data-action="night" aria-pressed="${state.night}">${ico('sun')}<span>${state.night?'Apagar luzes':'Acender luzes'}</span></button></div></section>`;}
 function finance(){const html=`<section class="chapter chapter-finance" aria-labelledby="finance-title"><div class="copy"><div class="eyebrow">02. Coloque as premissas à prova.</div><h2 id="finance-title">Entenda a conta.<br> <span style="color:#86868b">Antes de investir.</span></h2><p>${state.simulation.active?'Os dados informados no início. Agora, em perspectiva.':'Uma conta de exemplo. Comece o cadastro para simular com seus dados.'}</p><div class="scenario-recap"><div><span>Área construída</span><strong>${dec(state.simulation.builtArea,0)} m²</strong></div><div><span>Área vendável / privativa</span><strong>${dec(state.simulation.sellableArea,0)} m²</strong></div><div><span>Venda / m²</span><strong id="price-output">${money(state.price)}</strong></div><div><span>Construção / m²</span><strong id="cost-output">${money(state.cost)}</strong></div></div><p class="fine">Premissas fictícias: 1.800 m² de área vendável, 2.400 m² de construção, R$ 1.800.000,00 de terreno e R$ 1.400.000,00 de outras despesas.</p><button class="text-button" data-action="assumptions" style="font-size:12px;margin-top:8px">Entender as premissas <span aria-hidden="true">+</span></button></div><div class="finance-panel"><div class="finance-top"><span>Cenário residencial</span><span class="demo-badge">Exemplo, não avaliação</span></div><div class="big-number" id="revenue">R$ 14.760.000,00</div><div class="number-label">Receita potencial de vendas</div><div class="finance-chart"><div class="chart-row"><span>Terreno</span><div class="bar-track"><span id="bar-land"></span></div><strong>R$ 1.800.000,00</strong></div><div class="chart-row"><span>Construção</span><div class="bar-track"><span id="bar-build"></span></div><strong id="build-value"></strong></div><div class="chart-row"><span>Outras despesas</span><div class="bar-track"><span id="bar-other"></span></div><strong>R$ 1.400.000,00</strong></div><div class="chart-row accent"><span>Custo total</span><div class="bar-track"><span id="bar-total"></span></div><strong id="total-value"></strong></div></div><div class="finance-result" aria-live="polite"><div><span>Saldo ilustrativo</span><strong id="balance"></strong></div><div class="percentage" id="margin"></div></div><p class="fine" id="finance-disclaimer">Antes de tributos sobre a receita, financiamento e efeitos do prazo. Não é lucro líquido, promessa de retorno ou viabilidade aprovada.</p></div></section>`;return ICExtras.financeView(html);}
 function delivery(){return `<section class="chapter chapter-delivery refined-delivery" aria-labelledby="delivery-title"><div class="copy"><div class="eyebrow">03. Clareza para decidir. Experiências para apresentar.</div><h2 id="delivery-title">Sua próxima decisão.<br> <span style="color:#86868b">Em um estudo.</span></h2><p>Entenda o terreno. Veja os números. Experimente como o empreendimento pode ser apresentado.</p><div class="delivery-features"><span>${ico('plan')} Ocupação e entorno</span><span>${ico('chart')} Cenário econômico</span><span>${ico('layers')} Mídias imersivas</span></div><div class="actions"><button class="button" data-action="open-report">Abrir o estudo <span aria-hidden="true">↗</span></button><button class="text-button" data-action="start">Analisar meu terreno ›</button></div><p class="fine">Amostra demonstrativa. O estudo preliminar é a porta de entrada; projetos e produção de mídias são escopos separados. Não há análise automática do terreno.</p></div><div class="delivery-browser"><div class="delivery-browser-top"><span>Explore a entrega</span><span class="demo-badge">Demonstração</span></div><nav class="delivery-nav" aria-label="Prévia das entregas">${[['estudo','Estudo'],['0','Imagens'],['7','Plantas'],['1','Vídeo'],['2','3D + RA'],['6','Gamificação']].map(([k,l])=>`<button type="button" data-delivery="${k}" aria-pressed="${state.deliveryMode===k}">${l}</button>`).join('')}</nav><div id="delivery-display"></div></div></section>`;}
 function renderDelivery(){ICExtras.cleanup();const d=$('#delivery-display');if(!d)return;
@@ -2337,6 +2373,21 @@ document.addEventListener('click',e=>{const el=e.target.closest('button,a');if(!
  if(el.dataset.strategy){state.strategyTab=+el.dataset.strategy;renderWork();return;}
  if(el.dataset.chapter!==undefined){goChapter(Number(el.dataset.chapter));return;}
  if(el.dataset.variant){changeVariant(el.dataset.variant);return;}
+ if(el.dataset.floorNumber!==undefined){
+   if(state.chapter===1&&state.explode&&architecture){
+     const i=Number(el.dataset.floorNumber);
+     if(Number.isInteger(i)&&i>=0&&i<architecture.state.floorCount){
+       const next=state.selectedFloor===i?-1:i;
+       state.selectedFloor=next;state.onlyFloor=false;architecture.state.onlyFloor=false;
+       architecture.selectFloor(next);
+       $$('.floor-number-overlay [data-floor-number]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.floorNumber)===next)));
+       const msg=$('.enhanced-possibility .floor-number-help');
+       if(msg)msg.textContent=next<0?'Clique em um número para abrir o pavimento à esquerda.':'Pavimento '+String(next+1).padStart(2,'0')+' aberto à esquerda. Escolha outro número.';
+       fitScene();
+     }
+   }
+   return;
+ }
  if(el.dataset.report!==undefined){state.reportTab=Number(el.dataset.report);$('#report-preview').innerHTML=reportContent();$$('[data-report]').forEach(b=>b.setAttribute('aria-selected',String(Number(b.dataset.report)===state.reportTab)));transition($('#report-preview'));return;}
  if(el.dataset.service!==undefined){state.service=Number(el.dataset.service);$('#cycle-detail').innerHTML=serviceContent();$$('[data-service]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.service)===state.service)));transition($('#cycle-detail'));return;}
  if(el.dataset.intent){state.form.intent=el.dataset.intent;$$('[data-intent]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.intent===state.form.intent)));return;}
@@ -2358,7 +2409,15 @@ document.addEventListener('click',e=>{const el=e.target.closest('button,a');if(!
  case'isolate-floor':if(state.selectedFloor>=0&&architecture){state.onlyFloor=!state.onlyFloor;architecture.state.onlyFloor=state.onlyFloor;architecture.redraw();el.setAttribute('aria-pressed',String(state.onlyFloor));el.textContent=state.onlyFloor?'Ver conjunto':'Isolar andar';}break;
  case'next':state.chapter<4?goChapter(state.chapter+1):startWizard();break;case'prev':goChapter(state.chapter-1);break;case'menu':$('#mobile-menu').hidden=!$('#mobile-menu').hidden;el.setAttribute('aria-expanded',String(!$('#mobile-menu').hidden));break;
  case'land':case'building':ICExtras.cancelIntro?.(true);state.showBuilding=act==='building';if(!architecture)applyFallback();if(architecture){architecture.pause();Object.assign(architecture.state,{crane:0,craneLift:state.showBuilding?1:0});architecture.animate({structure:state.showBuilding?1:0,build:state.showBuilding?1:0,explode:0},1250);}$$('.home-control button').forEach(b=>b.setAttribute('aria-pressed',String((b.dataset.action==='building')===state.showBuilding)));break;
- case'explode':if(architecture){architecture.state.selectedFloor=-1;architecture.state.onlyFloor=false;architecture.state.floorSlide=0;state.selectedFloor=-1;state.onlyFloor=false;const f=$('#floor-select');if(f)f.value='-1';const offset=$('.floor-offset');if(offset)offset.hidden=true;}state.explode=!state.explode;architecture?.animate({explode:state.explode?1:0,zoom:state.explode?.67:1},1200);el.setAttribute('aria-pressed',String(state.explode));el.querySelector('span').textContent=state.explode?'Reunir pavimentos':'Separar pavimentos';break;
+ case'explode':
+   if(architecture){architecture.state.selectedFloor=-1;architecture.state.onlyFloor=false;architecture.state.floorSlide=0;state.selectedFloor=-1;state.onlyFloor=false;}
+   state.explode=!state.explode;
+   architecture?.animate({explode:state.explode?1:0,zoom:state.explode?.67:1},1200);
+   const numbers=$('.floor-number-overlay');if(numbers){numbers.hidden=!state.explode;numbers.querySelectorAll('[data-floor-number]').forEach(b=>b.setAttribute('aria-pressed','false'));}
+   const hint=$('.enhanced-possibility .floor-number-help');if(hint)hint.textContent=state.explode?'Clique no número à esquerda de cada andar para abri-lo.':'Separe pavimentos para escolher um andar.';
+   el.setAttribute('aria-pressed',String(state.explode));
+   el.querySelector('span').textContent=state.explode?'Reunir pavimentos':'Separar pavimentos';
+   break;
  case'night':state.night=!state.night;architecture?.animate({night:state.night?1:0},1600);el.setAttribute('aria-pressed',String(state.night));el.querySelector('span').textContent=state.night?'Apagar luzes':'Acender luzes';break;
  case'rotate':architecture?.animate({yaw:architecture.state.yaw+.65},750);break;case'reset-view':state.explode=false;state.night=false;state.selectedFloor=-1;state.onlyFloor=false;architecture?.reset();if(state.chapter===1){$('#chapter-content').innerHTML=possibility();fitScene();}break;
  case'start':startWizard();break;case'close-wizard':$('#wizard').close();returnFocus?.focus?.({preventScroll:true});break;case'wizard-back':if(state.wizardStep===0){$('#wizard').close();}else if(state.reviewEdit){state.reviewEdit=false;state.wizardStep=reviewIndex();renderWizard();}else{state.wizardStep--;renderWizard();}break;
@@ -3179,5 +3238,42 @@ window.IC_PATOS_MARKET=[{"id":"JUCA-TE0584","kind":"market","category":"land","t
  .capability-workspace #work-content[data-module="projects"] .bim-cut input{grid-column:2;min-width:0}
  .capability-workspace #work-content[data-module="projects"] .bim-cut .fine{display:none}
 }
+</style>
+<style id="ic-direct-floor-numbers">
+
+/* 08/10/2026 · Seleção direta de pavimentos na maquete 3D. */
+.enhanced-possibility .floor-explorer{display:none!important}
+.enhanced-possibility .floor-number-overlay{
+ position:absolute;inset:0;z-index:8;pointer-events:none;overflow:visible
+}
+.enhanced-possibility .floor-number-overlay[hidden]{display:none!important}
+.enhanced-possibility .floor-number-overlay [data-floor-number]{
+ position:absolute;left:60%;top:55%;transform:translate(-100%,-50%);z-index:2;
+ display:flex;align-items:center;justify-content:center;
+ width:36px;height:27px;min-height:27px;padding:0;border:1px solid #d4d9e1;
+ background:#ffffffee;color:#32363e;box-shadow:0 2px 9px #11111116;
+ border-radius:9px;font-size:11px;font-weight:650;line-height:1;
+ font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer;
+ pointer-events:auto;transition:background .18s,border-color .18s,color .18s,box-shadow .18s
+}
+.enhanced-possibility .floor-number-overlay [data-floor-number]::after{
+ content:"";position:absolute;left:100%;top:50%;width:12px;height:1px;background:#b4bbc4;pointer-events:none
+}
+.enhanced-possibility .floor-number-overlay [data-floor-number]:hover{
+ background:#eef5ff;color:#0068ce;border-color:#0071e3
+}
+.enhanced-possibility .floor-number-overlay [data-floor-number][aria-pressed="true"]{
+ color:#fff;background:#0071e3;border-color:#0071e3;box-shadow:0 3px 13px #0071e343
+}
+.enhanced-possibility .floor-number-overlay [data-floor-number]:focus-visible{
+ outline:3px solid #147ee5;outline-offset:3px
+}
+@media(max-width:800px){
+ .enhanced-possibility .floor-number-overlay [data-floor-number]{
+   width:31px;height:25px;min-height:25px;font-size:10px;border-radius:7px
+ }
+ .enhanced-possibility .floor-number-overlay [data-floor-number]::after{width:8px}
+}
+
 </style>
 </body></html>
