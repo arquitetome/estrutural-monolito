@@ -1,0 +1,59 @@
+name: IncorpCycle - HTTPS certificate watch
+on:
+  push:
+    paths:
+      - ".github/workflows/incorpcycle-https-watch.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+permissions:
+  contents: read
+  pages: write
+jobs:
+  inspect-https:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check domain, certificate and automatically enforce HTTPS when available
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          API="https://api.github.com/repos/$GITHUB_REPOSITORY/pages"
+          echo "=== GitHub Pages authoritative configuration ==="
+          curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$API" > /tmp/pages.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/pages.json'))
+          print(json.dumps({k:d.get(k) for k in ['status','html_url','cname','https_enforced','https_certificate']},ensure_ascii=False,indent=2))
+          PY
+          DOMAIN="$(python3 -c 'import json; print(json.load(open("/tmp/pages.json")).get("cname") or "")')"
+          if [ "$DOMAIN" != "www.incorpcycle.com" ]; then
+            echo "::error::Unexpected GitHub Pages domain: $DOMAIN"
+            exit 1
+          fi
+          STATE="$(python3 -c 'import json; print((json.load(open("/tmp/pages.json")).get("https_certificate") or {}).get("state","unknown"))')"
+          ENFORCED="$(python3 -c 'import json; print(str(json.load(open("/tmp/pages.json")).get("https_enforced", False)).lower())')"
+          echo "Certificate state: $STATE; HTTPS enforced: $ENFORCED"
+          if [ "$ENFORCED" = "true" ]; then
+            echo "HTTPS already enforced."
+          elif [ "$STATE" = "issued" -o "$STATE" = "active" -o "$STATE" = "approved" ]; then
+            echo "Certificate ready; trying to enable HTTPS enforcement."
+            RESULT="$(curl -sS -o /tmp/pages-update.json -w '%{http_code}' -X PUT -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'Content-Type: application/json' "$API" -d '{"https_enforced":true}')"
+            echo "HTTPS enable status: $RESULT"
+            if [ "$RESULT" != "204" ]; then
+              echo "::warning::Pages configuration requires owner-level Administration and Pages write permissions. HTTPS was not enforced; GitHub owner may need to select Enforce HTTPS in repository Settings > Pages."
+              cat /tmp/pages-update.json || true
+            fi
+          else
+            echo "Certificate has not been issued yet. GitHub handles TLS issuance asynchronously; not enabling HTTPS until valid."
+          fi
+          echo "=== DNS ==="
+          dig +short www.incorpcycle.com CNAME || true
+          echo "=== TLS presented certificate ==="
+          timeout 12 bash -c 'echo | openssl s_client -connect www.incorpcycle.com:443 -servername www.incorpcycle.com 2>/dev/null | openssl x509 -noout -subject -issuer -ext subjectAltName' || true
+          echo "=== Public favicon icon and page ==="
+          curl -ksS --max-time 15 -o /tmp/favicon.ico -w "favicon.ico HTTP %{http_code}, bytes %{size_download}, MIME %{content_type}\n" "https://www.incorpcycle.com/favicon.ico" || true
+          file /tmp/favicon.ico || true
+          curl -ksS --max-time 15 -o /dev/null -w "index.html HTTP %{http_code}, bytes %{size_download}\n" "https://www.incorpcycle.com/" || true
