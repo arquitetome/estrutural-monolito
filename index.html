@@ -1722,13 +1722,16 @@ function runPossibilityGesture(){
  introTimers.push(setTimeout(()=>runGestureRotation(1),550));
 }
 function runHeroCycle(){const arch=ctx?.architecture();if(ctx?.state.chapter!==0||!arch||$('dialog[open]'))return;
- E.cancelIntro(false);heroTouched=false;introPlayed=true;setHeroStep('land');arch.pause();Object.assign(arch.state,{build:0,structure:0,crane:0,craneLift:0,explode:0,yaw:-.17,pitch:.61,selectedFloor:-1,floorSlide:0,onlyFloor:false});arch.redraw();
- if(matchMedia('(prefers-reduced-motion:reduce)').matches){Object.assign(arch.state,{structure:1,build:1,crane:0,craneLift:1});arch.redraw();setHeroStep('building');return;}
+ E.cancelIntro(false);heroTouched=false;introPlayed=true;setHeroStep('land');arch.pause();Object.assign(arch.state,{build:0,structure:0,crane:0,craneLift:0,explode:0,night:0,yaw:-.17,pitch:.61,selectedFloor:-1,floorSlide:0,onlyFloor:false});arch.redraw();
+ if(matchMedia('(prefers-reduced-motion:reduce)').matches){Object.assign(arch.state,{structure:1,build:1,crane:0,craneLift:1,night:1});arch.redraw();setHeroStep('building');return;}
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.animate({crane:1},850);},700));
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;setHeroStep('building');arch.animate({structure:1,craneLift:1},3000);},1550));
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.animate({build:1},3150);},4550));
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.animate({crane:0},700);},7550));
- introTimers.push(setTimeout(()=>{if(ctx.state.chapter===0&&!heroTouched&&!$('dialog[open]'))runGestureRotation(0);},8250));
+ // Acender somente após a grua sair; não interromper a animação da grua.
+ introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.animate({night:1},480);},8270));
+ // Gesto demonstrativo acontece após as luzes acenderem, sem mudar o ciclo total.
+ introTimers.push(setTimeout(()=>{if(ctx.state.chapter===0&&!heroTouched&&!$('dialog[open]'))runGestureRotation(0);},8900));
  // Recomeça automaticamente depois de uma pausa, sem botão manual.
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter===0&&!heroTouched&&!$('dialog[open]'))runHeroCycle();},21000));
 }
