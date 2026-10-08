@@ -99,6 +99,30 @@ jobs:
             }));
             console.log('HERO LIGHT AFTER',JSON.stringify(heroLightAfter));
             await page.screenshot({path:'/tmp/incorp-home-lights-on.png'});
+            // Nova cena: carro percorre a rua frontal da direita para a esquerda
+            // quando o edifício já está parado; o loop continua com 21 segundos.
+            await page.waitForFunction(()=>{
+              const a=window.incorpDebug?.architecture?.state;
+              return a?.heroCarActive===1&&a.heroCarTravel>.12&&a.heroCarTravel<.92;
+            },null,{timeout:17000});
+            const carStart=await page.evaluate(()=>({
+              progress:window.incorpDebug.architecture.state.heroCarTravel,
+              night:window.incorpDebug.architecture.state.night,
+              active:window.incorpDebug.architecture.state.heroCarActive
+            }));
+            await page.screenshot({path:'/tmp/incorp-home-car-moving.png'});
+            await sleep(450);
+            const carMoving=await page.evaluate(()=>window.incorpDebug.architecture.state.heroCarTravel);
+            if(carStart.active!==1||carStart.night<.95||carMoving<carStart.progress+.018)
+              throw new Error('Car must move while the building is illuminated');
+            await page.waitForFunction(()=>{
+              const a=window.incorpDebug?.architecture?.state;
+              return a?.heroCarActive===0&&a.heroCarTravel>.985;
+            },null,{timeout:9000});
+            console.log('PASS HERO CAR',JSON.stringify({entered:carStart.progress,advanced:carMoving,
+              exited:await page.evaluate(()=>window.incorpDebug.architecture.state.heroCarTravel),
+              lights:carStart.night,loopMs:21000}));
+            await page.screenshot({path:'/tmp/incorp-home-car-exited.png'});
             await page.evaluate(()=>window.incorpDebug.goChapter(1));
             const types=['residencial','misto','studios','hotel','comercial','chacaras','casas','logistico','multi'];
             for(const type of types){
@@ -158,7 +182,7 @@ jobs:
             await page.screenshot({path:'/tmp/incorp-game.png'});
             if(errors.length)throw new Error('Page runtime errors: '+errors.join('; '));
             await browser.close();
-            console.log('PASS BROWSER QA: home, variants, floor, projects, game');
+            console.log('PASS BROWSER QA: home, car, variants, floor, projects, game');
           })().catch(e=>{console.error(e.stack||e);process.exit(1)});
           JS
           node /tmp/incorp-browser-qa.cjs
