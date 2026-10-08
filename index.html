@@ -1756,7 +1756,7 @@ function runHeroCycle(){const arch=ctx?.architecture();if(ctx?.state.chapter!==0
  // Gesto demonstrativo acontece após as luzes acenderem, sem mudar o ciclo total.
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter===0&&!heroTouched&&!$('dialog[open]'))runGestureRotation(0);},8900));
  // Ao terminar o movimento, a cena fica clara e permanece assim até reiniciar o loop.
- introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.animate({night:.18},280);},13250));
+ introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.state.night=.18;arch.redraw();},13250));
  // O carro percorre a rua frontal em diagonal, da direita para a esquerda.
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.state.heroCarActive=1;arch.state.heroCarTravel=0;arch.animate({heroCarTravel:1},4550);},14200));
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.state.heroCarActive=0;arch.redraw();},18800));
