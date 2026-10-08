@@ -1,0 +1,106 @@
+name: IncorpCycle - QA das vistas 3D e interface
+on:
+  push:
+    paths:
+      - "index.html"
+      - ".github/workflows/incorpcycle-ui-qa.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qa-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar sintaxe dos scripts e integridade do layout
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re,subprocess,pathlib,sys
+          s=pathlib.Path('index.html').read_text()
+          checks={
+            'model floor shifts left': "mat[12]-=.86*d" in s,
+            'site has architecture variants': all(x in s for x in ["if(type==='studios'){w=10.5", "if(type==='hotel'){w=19.2", "if(type==='comercial'){w=18.8", "if(type==='misto'){w=f===0?24"]),
+            'dirt rural roads': "Circulações de chácaras: caminhos rurais" in s,
+            'fullscreen controls separated': ".game-surface .game-exit{top:59px" in s,
+            'BIM horizontal cut visible': "mostrar corte horizontal sem barra de rolagem" in s,
+            'favicons present': pathlib.Path('favicon.ico').exists() and pathlib.Path('favicon.png').exists(),
+            'humanized plan preserved': 'const APPROVED_PLAN=' in s
+          }
+          for k,v in checks.items(): print(('PASS' if v else 'FAIL')+' '+k)
+          if not all(checks.values()):sys.exit(1)
+          scripts=re.findall(r'<script\b([^>]*)>(.*?)</script>',s,re.S|re.I)
+          count=0
+          for attrs,code in scripts:
+            if re.search(r'\btype\s*=\s*["\x27](?:text/plain|application/ld\+json)',attrs,re.I) or not code.strip():continue
+            if re.search(r'\bsrc\s*=',attrs,re.I):continue
+            path=pathlib.Path('/tmp/incorp-check.js')
+            path.write_text(code)
+            chk=subprocess.run(['node','--check',str(path)],capture_output=True,text=True)
+            if chk.returncode:
+              print('ERROR on script',count,attrs[:100],chk.stderr[:2000]);sys.exit(1)
+            count+=1
+          print('PASS JS syntax, script blocks:',count)
+          PY
+      - name: Testar WebGL 3D, seleção de andares, painel BIM e gamificação
+        shell: bash
+        run: |
+          command -v google-chrome || true
+          npm install --no-save --no-package-lock playwright@1.56.1
+          python3 -m http.server 8055 --bind 127.0.0.1 >/tmp/incorp-http.log 2>&1 &
+          sleep 2
+          cat >/tmp/incorp-browser-qa.cjs <<'JS'
+          const {chromium}=require(process.cwd()+'/node_modules/playwright');
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+          (async()=>{
+            const exe=process.env.CHROME_BIN||'/usr/bin/google-chrome';
+            const browser=await chromium.launch({headless:true,executablePath:exe,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--enable-unsafe-swiftshader']});
+            const page=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
+            const errors=[];
+            page.on('pageerror',e=>{errors.push(String(e.message));console.log('PAGEERROR',e.message)});
+            await page.goto('http://127.0.0.1:8055/index.html',{waitUntil:'domcontentloaded',timeout:90000});
+            await page.waitForFunction(()=>window.incorpDebug?.architecture||document.querySelector('.scene-host')?.classList.contains('no-webgl'),{timeout:35000});
+            console.log('HOME',await page.evaluate(()=>({has3d:!!window.incorpDebug?.architecture,rendered:document.querySelector('.scene-host canvas')?.dataset.rendered,chapter:document.querySelector('#main')?.dataset.chapter})));
+            await page.screenshot({path:'/tmp/incorp-home.png'});
+            await page.evaluate(()=>window.incorpDebug.goChapter(1));
+            const types=['residencial','misto','studios','hotel','comercial','chacaras','casas','logistico','multi'];
+            for(const type of types){
+              await page.evaluate(t=>window.incorpDebug.changeVariant(t),type);
+              await sleep(140);
+              console.log('TYPE',type,await page.evaluate(()=>({type:window.incorpDebug.architecture?.state.type,stats:window.incorpDebug.architecture?.stats()})));
+              if(['residencial','misto','studios','hotel','comercial','chacaras'].includes(type))await page.screenshot({path:'/tmp/incorp-'+type+'.png'});
+            }
+            await page.evaluate(()=>window.incorpDebug.changeVariant('residencial'));
+            await page.locator('#floor-select').selectOption('3');
+            await sleep(950);
+            console.log('FLOOR',await page.evaluate(()=>({selected:window.incorpDebug.architecture?.state.selectedFloor,slide:window.incorpDebug.architecture?.state.floorSlide})));
+            await page.screenshot({path:'/tmp/incorp-floor-left.png'});
+            await page.evaluate(()=>window.incorpDebug.goChapter(4));
+            await sleep(800);
+            const bim=await page.evaluate(()=>{const x=document.querySelector('#work-content[data-module="projects"]'), c=x?.querySelector('#bim-cut');let r=c?.getBoundingClientRect(),parent=x?.getBoundingClientRect();return {found:!!x,foundCut:!!c,overflow:x?getComputedStyle(x).overflowY:null,cutBottom:r?.bottom,contentBottom:parent?.bottom,cutFits:!!r&&!!parent&&r.bottom<=parent.bottom+1}});
+            console.log('BIM',JSON.stringify(bim));
+            if(!bim.foundCut||bim.overflow!=='hidden'||!bim.cutFits)throw new Error('BIM cut control should be visible without scroll');
+            await page.screenshot({path:'/tmp/incorp-projects.png'});
+            await page.evaluate(()=>window.incorpDebug.goChapter(3));
+            await page.locator('[data-delivery="6"]').click();
+            await sleep(650);
+            await page.locator('[data-ic="game-start"]').click();
+            const controls=await page.evaluate(()=>{const fs=document.querySelector('.game-surface .media-fullscreen').getBoundingClientRect(),pause=document.querySelector('.game-surface .game-exit').getBoundingClientRect();return {fullscreenTop:fs.top,fullscreenBottom:fs.bottom,pauseTop:pause.top,overlap:!(pause.top>=fs.bottom||fs.top>=pause.bottom||pause.left>=fs.right||pause.right<=fs.left)}});
+            console.log('GAME',JSON.stringify(controls));
+            if(controls.overlap)throw new Error('Game buttons overlap');
+            await page.screenshot({path:'/tmp/incorp-game.png'});
+            if(errors.length)throw new Error('Page runtime errors: '+errors.join('; '));
+            await browser.close();
+            console.log('PASS BROWSER QA: home, variants, floor, projects, game');
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)});
+          JS
+          node /tmp/incorp-browser-qa.cjs
+      - name: Salvar capturas técnicas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: incorpcycle-qa-capturas
+          path: /tmp/incorp-*.png
+          if-no-files-found: ignore
+          retention-days: 7
