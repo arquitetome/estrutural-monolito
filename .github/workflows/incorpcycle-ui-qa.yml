@@ -87,8 +87,9 @@ jobs:
             console.log('FLOOR MARKERS',JSON.stringify(markerData));
             if(count!==8||!markerData.visible||markerData.positions.some(p=>!p.within||!Number.isFinite(p.x)||!Number.isFinite(p.y)))
               throw new Error('Floor numbers must be visible, positioned and clickable after separating');
+            await page.screenshot({path:'/tmp/incorp-floor-markers.png'});
             await page.locator('[data-floor-number="3"]').click();
-            await sleep(1000);
+            await page.waitForFunction(()=>window.incorpDebug?.architecture?.state?.floorSlide>.8,{timeout:18000});
             const selected=await page.evaluate(()=>({
               selected:window.incorpDebug.architecture?.state.selectedFloor,
               slide:window.incorpDebug.architecture?.state.floorSlide,
@@ -99,7 +100,7 @@ jobs:
               throw new Error('Floor 04 did not open to the left');
             await page.screenshot({path:'/tmp/incorp-floor-left.png'});
             await page.locator('[data-floor-number="3"]').click();
-            await sleep(950);
+            await page.waitForFunction(()=>window.incorpDebug?.architecture?.state?.floorSlide<.2,{timeout:18000});
             const returned=await page.evaluate(()=>({selected:window.incorpDebug.architecture?.state.selectedFloor,slide:window.incorpDebug.architecture?.state.floorSlide}));
             if(returned.selected!==-1||returned.slide>.2)throw new Error('Selected floor should return to separated stack');
             await page.locator('[data-action="explode"]').click();
