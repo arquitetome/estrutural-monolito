@@ -911,11 +911,11 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  const fs=`#version 300 es
  precision highp float;
  in vec3 vNormal,vPosition,vColor,vLocal;in vec2 vMaterial;in vec4 vShadow;out vec4 outColor;
- uniform sampler2D uShadowMap;uniform vec3 uEye;uniform float uNight,uBlueprint,uCut,uStudio,uInterior;
+ uniform sampler2D uShadowMap;uniform vec3 uEye;uniform float uNight,uBlueprint,uCut,uStudio,uInterior,uFloorPreview;
  float hash(vec3 p){return fract(sin(dot(p,vec3(12.9898,78.233,45.164)))*43758.5453);}
  float shadow(){vec3 p=vShadow.xyz/vShadow.w*.5+.5;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.||p.z>1.)return 1.;float sum=0.;float bias=max(.00065,.0017*(1.-max(dot(normalize(vNormal),normalize(vec3(-.5,1.,.4))),0.)));for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++){float d=texture(uShadowMap,p.xy+vec2(x,y)/2048.).r;sum+=p.z-bias<d?1.:.20;}return sum/9.;}
  vec3 sky(vec3 d){float h=clamp(d.y*.65+.35,0.,1.);return mix(vec3(.11,.15,.19),mix(vec3(.48,.63,.77),vec3(.87,.92,.97),pow(1.-h,2.)),h);}
- void main(){if(vPosition.y>uCut)discard;vec3 n=normalize(vNormal),l=normalize(vec3(-.5,1.,.4)),v=normalize(uEye-vPosition),h=normalize(l+v);float ndl=max(dot(n,l),0.),rough=vMaterial.x,rawMetal=vMaterial.y,metal=clamp(rawMetal,0.,1.),sh=shadow();
+ void main(){if(vPosition.y>uCut)discard;vec3 n=normalize(vNormal),l=normalize(vec3(-.5,1.,.4)),v=normalize(uEye-vPosition),h=normalize(l+v);float ndl=max(dot(n,l),0.),rough=vMaterial.x,rawMetal=vMaterial.y,metal=clamp(rawMetal,0.,1.),sh=mix(shadow(),.95,uFloorPreview);
  if(uStudio>.5){vec3 bg=vec3(1.);outColor=vec4(mix(bg,bg*.74,(1.-sh)*mix(.60,.18,uNight)),1.);return;}
  vec3 base=pow(vColor,vec3(2.2));
  float grain=hash(floor(vLocal*155.));
@@ -1103,8 +1103,19 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
   box(0,-.77,0,200,.1,200,[.955,.957,.962,1,0]);group('studio',0,false);
   roundBox(0,-.4,0,37,.70,27,.85,pal.edge);box(0,-.02,0,36.4,.07,26.4,[.62,.67,.48,.94,0]);group('site');
   const rural=type==='chacaras',split=type==='desmembramento';
-  box(0,.08,11.15,36,.12,3.0,pal.road);
-  if(!split){box(0,.09,0,3.8,.13,24,pal.road);box(0,.10,-2.4,34,.13,3.3,pal.road);}
+  const dirt=[.58,.44,.29,.98,0],rut=[.70,.55,.38,.94,0],darkSoil=[.48,.35,.24,.94,0];
+  // Circulações de chácaras: caminhos rurais em terra, com trilhas de pneus.
+  box(0,.08,11.15,36,.12,3.0,rural?dirt:pal.road);
+  if(!split){
+   box(0,.09,0,rural?3.35:3.8,.13,24,rural?dirt:pal.road);
+   box(0,.10,rural?-1.25:-2.4,34,.13,rural?2.7:3.3,rural?dirt:pal.road);
+   if(rural){
+    for(const x of [-.88,.88])box(x,.18,0,.23,.019,23.6,rut);
+    for(const z of [-2.04,-.46])box(0,.18,z,32.5,.019,.17,rut);
+    for(let z=-9;z<10;z+=2.2)box((rand()-.5)*.35,.19,z,.84,.018,.3,darkSoil);
+    for(const side of [-1,1])for(const z of [-7.4,5.2])box(side*3.20,.19,z,3.6,.016,.90,dirt);
+   }
+  }
   const cols=split?4:rural?2:4,rows=split?1:rural?2:3;
   for(let side of (split?[0]:[-1,1]))for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
    let w=split?7.6:rural?6.0:3.0,d=split?17:rural?8:5.0;
@@ -1149,6 +1160,13 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  group('context');
  if(['casas','logistico','multi'].includes(type)){campus(type);return;}
  let count=(configs[type]||configs.residencial).floors;
+ const skins={
+  misto:{edge:[.82,.79,.73,.62,.05],stone:[.72,.69,.64,.82,0],glass:[.19,.30,.33,.16,.90],frame:[.38,.27,.18,.38,.55],accent:[.70,.39,.24,.75,.08]},
+  studios:{edge:[.93,.86,.79,.65,0],stone:[.84,.73,.65,.83,0],glass:[.25,.34,.36,.19,.87],frame:[.65,.34,.24,.65,.10],accent:[.79,.43,.30,.66,.10]},
+  hotel:{edge:[.88,.84,.77,.62,.05],stone:[.68,.65,.59,.77,0],glass:[.16,.24,.28,.16,.89],frame:[.34,.30,.27,.55,.12],accent:[.73,.60,.41,.75,.05]},
+  comercial:{edge:[.41,.48,.53,.60,.12],stone:[.51,.57,.60,.78,.10],glass:[.13,.25,.38,.13,.95],frame:[.17,.24,.30,.35,.65],accent:[.33,.50,.62,.49,.36]}
+ };
+ const skin=skins[type];
  const heights=[];
  // Construction sequence geometry: a tower crane and a structural skeleton precede the finished facade.
  constructionCrane();
@@ -1157,7 +1175,11 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  floorIndex=f;let floorY=.47+f*2.55;
  let inset=['hotel','studios','comercial'].includes(type)?0:f>=count-2?(f-count+3)*1.35:0;
  let w=type==='casa'?(f===0?18:13.5):(type==='misto'&&f===0?22:14.8-inset),d=type==='casa'?(f===0?12:10):11.7-inset*.6;
- let cx=type==='misto'?1.4:0,cz=-1.3;
+ if(type==='studios'){w=10.5;d=9.8;}
+ if(type==='hotel'){w=19.2;d=10.4;}
+ if(type==='comercial'){w=18.8;d=12.0;}
+ if(type==='misto'){w=f===0?24:f===1?20:13.2;d=f===0?15.2:f===1?13.3:10.2;}
+ let cx=type==='misto'?(f===0?0:2.1):0,cz=-1.3;
  const concrete=[.59,.61,.63,.88,.02];
  // Slab, columns and beams: deliberately schematic, used only during the opening construction animation.
  box(cx,.10,cz,w+.75,.20,d+.75,concrete);
@@ -1165,16 +1187,16 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  for(const zz of [cz-d/2+.65,cz+d/2-.65])box(cx,2.42,zz,w-.9,.24,.28,concrete);
  for(const xx of [cx-w/2+.75,cx+w/2-.75])box(xx,2.42,cz,.28,.24,d-.9,concrete);
  group('construction-floor',floorY);
- roundBox(cx,.13,cz,w+2.4,.30,d+2.1,.9,pal.edge);
- roundBox(cx,.33,cz,w+2.15,.08,d+1.85,.8,pal.stone);
- box(cx,1.45,cz,w,2.27,d,pal.glass);
+ roundBox(cx,.13,cz,w+2.4,.30,d+2.1,.9,skin?skin.edge:pal.edge);
+ roundBox(cx,.33,cz,w+2.15,.08,d+1.85,.8,skin?skin.stone:pal.stone);
+ box(cx,1.45,cz,w,2.27,d,skin?skin.glass:pal.glass);
  box(cx-.7,1.4,cz-1.5,3.7,2.35,4.4,pal.stone);
  if(type==='hotel'||type==='studios'){for(let x=-w/2+.6;x<w/2;x+=1.6)box(cx+x,1.5,cz+d/2+.3,.17,2.1,.45,pal.edge);}
  if(type==='comercial'){box(cx,1.4,cz-1.6,6,2.4,4,pal.dark);for(let z of [-d/2,d/2])box(cx,2.5,cz+z,w,.18,.25,pal.dark);}
  // warm internal partitions glimpsed behind dark continuous glass.
  for(let x=-w/2+1;x<w/2;x+=3.1){box(cx+x,1.4,cz, .12,2.22,d-.1,pal.dark);}
  for(let z=-d/2;z<=d/2;z+=1.37){for(let x of [-w/2,w/2])box(cx+x,1.46,cz+z,.075,2.25,.06,pal.bronze);}
- for(let x=-w/2;x<=w/2+.1;x+=1.3){for(let z of [-d/2,d/2])box(cx+x,1.46,cz+z,.055,2.25,.075,pal.bronze);}
+ for(let x=-w/2;x<=w/2+.1;x+=1.3){for(let z of [-d/2,d/2])box(cx+x,1.46,cz+z,.055,2.25,.075,skin?skin.frame:pal.bronze);}
  // Glass balustrade and slender top rails (opaque material avoids sorting artifacts).
  for(let z of [-d/2-.72,d/2+.72]){box(cx,.91,cz+z,w+1.2,.86,.047,[.46,.54,.55,.22,.58]);box(cx,1.35,cz+z,w+1.5,.035,.055,pal.bronze);}
  for(let x of [-w/2-.72,w/2+.72]){box(cx+x,.91,cz,.047,.86,d+1.4,[.46,.54,.55,.22,.58]);box(cx+x,1.35,cz,.055,.035,d+1.5,pal.bronze);}
@@ -1187,16 +1209,82 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  // Recessed warm strips; independent of reflective glazing.
  for(const z of [-d/2-.32,d/2+.32])box(cx,2.52,cz+z,w-.6,.045,.08,[1.,.80,.48,.25,1.5]);
  for(let j=0;j<3;j++){const x=cx+w/2-3+j*.56;roundBox(x,.70,cz+d/2+.20,.45,.06,.47,.06,[.54,.45,.33,.88,0]);}
+ // Cada tipologia possui agora linguagem arquitetônica própria, inclusive cobertura.
+ if(type==='studios'){
+  for(let x=-w/2+1.05;x<w/2-.4;x+=2.1){
+   box(cx+x,1.55,cz+d/2+.43,.18,2.35,.52,skin.accent);
+   box(cx+x+1.03,1.57,cz+d/2+.23,1.20,1.63,.12,skin.glass);
+   box(cx+x+.48,.35,cz+d/2+.72,1.74,.18,1.05,skin.edge);
+   box(cx+x+.48,.70,cz+d/2+1.20,1.74,.65,.05,skin.glass);
+  }
+  box(cx-w/2+.22,1.4,cz+d/2+.28,.40,2.40,.36,skin.accent);
+ }else if(type==='hotel'){
+  box(cx,1.4,cz+d/2+.12,w-.7,2.1,.17,skin.stone);
+  for(let x=-w/2+1.4;x<w/2-.5;x+=2.55){
+   box(cx+x,1.43,cz+d/2+.27,1.43,1.72,.12,skin.frame);
+   box(cx+x,1.43,cz+d/2+.35,1.16,1.48,.08,skin.glass);
+   box(cx+x,2.43,cz+d/2+.30,1.65,.15,.29,skin.accent);
+  }
+  box(cx,.31,cz+d/2+.48,w+.85,.24,1.17,skin.edge);
+  if(f===0){box(cx,2.42,cz+d/2+1.7,w*.62,.28,2.7,skin.accent);for(const x of [-5,5])box(cx+x,1.2,cz+d/2+2.68,.26,2.3,.3,skin.frame);}
+ }else if(type==='comercial'){
+  for(let x=-w/2+.25;x<=w/2-.15;x+=2.35)box(cx+x,1.45,cz+d/2+.18,.23,2.38,.33,skin.frame);
+  for(const z of [-d/2-.24,d/2+.24]){
+   box(cx,2.41,cz+z,w+.6,.18,.59,skin.frame);
+   box(cx,1.53,cz+z,w+.6,.10,.50,skin.accent);
+  }
+  if(f===0)box(cx,2.52,cz+d/2+1.38,w*.64,.30,2.4,skin.frame);
+ }else if(type==='misto'){
+  if(f===0){
+   for(let x=-w/2+1.9;x<w/2-.2;x+=3.85){
+    box(cx+x,1.45,cz+d/2+.25,3.15,2.14,.11,skin.glass);
+    box(cx+x,2.47,cz+d/2+.43,3.3,.26,.53,skin.accent);
+    box(cx+x+1.58,1.42,cz+d/2+.44,.10,2.06,.19,skin.frame);
+   }
+   box(cx,2.51,cz+d/2+1.33,w*.79,.30,2.2,skin.accent);
+  }else if(f===1){
+   for(let x=-w/2+1.45;x<w/2-1;x+=3.8)planter(cx+x,.4,cz+d/2+.64,1.5,.45);
+  }else{
+   for(let x=-w/2+.8;x<w/2-.2;x+=2.85){
+    box(cx+x,1.56,cz+d/2+.25,.19,2.3,.42,skin.accent);
+    box(cx+x+1.05,.41,cz+d/2+.77,1.95,.18,.98,skin.edge);
+   }
+  }
+ }
  group('floor',floorY);floorDetail(type,cx,cz,w,d,f);group('floor-detail',floorY);heights.push(floorY);
  }
  floorIndex=-1;let ry=.47+count*2.55;
- let roofw=type==='casa'?16:12.1,roofd=type==='casa'?11:10.1;
- roundBox(0,.13,-1.3,roofw+2.4,.32,roofd+2,.85,pal.edge);
- box(-2.3,.38,-1.3,6.4,.2,5.7,pal.wood);box(-2.3,.52,-1.3,5.6,.16,4.8,pal.water);
- for(let x of [2.5,6])for(let z of [-4,1])box(x,1.55,z,.12,2.9,.12,pal.bronze);
- for(let z=-4;z<=1.1;z+=.27)box(4.25,3,z,4.1,.09,.11,pal.wood);
- for(let z of [-5.9,3.3])planter(0,.28,z,10.5,.5);
- tree(5.3,.45,2.2,.62);tree(-5.5,.45,-4.2,.7);group('roof',ry);
+ if(skin){
+  const rw=type==='studios'?10.5:type==='hotel'?19.2:type==='comercial'?18.8:13.2;
+  const rd=type==='studios'?9.8:type==='hotel'?10.4:type==='comercial'?12:10.2;
+  const rx=type==='misto'?2.1:0;
+  roundBox(rx,.13,-1.3,rw+2,.30,rd+1.6,.55,skin.edge);
+  box(rx,.30,-1.3,rw-.2,.09,rd-.25,skin.stone);
+  if(type==='studios'){
+   for(const x of [-3.2,0,3.2])for(const z of [-3,1.8])planter(rx+x,.4,-1.3+z,1.2,.55);
+   for(let x=-4;x<=4;x+=1)box(rx+x,2.7,1.9,.10,.16,4.3,skin.accent);
+   for(const z of [0,3.9])box(rx,2.7,z,9,.18,.13,skin.frame);
+  }else if(type==='hotel'){
+   box(rx,.85,-1.3,6.3,1.1,4,skin.frame);box(rx,1.6,-1.3,5.7,.31,3.65,skin.accent);
+   for(const x of [-7,7])planter(rx+x,.45,1.4,3,.65);
+  }else if(type==='comercial'){
+   for(let x=-7.3;x<8;x+=2.5)for(let z=-4;z<4;z+=2.2)box(rx+x,.42,-1.3+z,2.05,.1,1.75,skin.glass);
+   box(rx,.91,-1.3,3.4,1.1,3.2,skin.frame);
+  }else if(type==='misto'){
+   for(const x of [-4,-1,3.5])planter(rx+x,.4,2.1,1.6,.5);
+   box(rx-1,.48,-1.8,3.1,.44,2.5,skin.accent);
+   box(rx+3,.48,-1.8,2.8,.44,2.5,skin.glass);
+  }
+ }else{
+  let roofw=type==='casa'?16:12.1,roofd=type==='casa'?11:10.1;
+  roundBox(0,.13,-1.3,roofw+2.4,.32,roofd+2,.85,pal.edge);
+  box(-2.3,.38,-1.3,6.4,.2,5.7,pal.wood);box(-2.3,.52,-1.3,5.6,.16,4.8,pal.water);
+  for(let x of [2.5,6])for(let z of [-4,1])box(x,1.55,z,.12,2.9,.12,pal.bronze);
+  for(let z=-4;z<=1.1;z+=.27)box(4.25,3,z,4.1,.09,.11,pal.wood);
+  for(const z of [-5.9,3.3])planter(0,.28,z,10.5,.5);
+  tree(5.3,.45,2.2,.62);tree(-5.5,.45,-4.2,.7);
+ }
+ group('roof',ry);
  // Entry steps and reflecting garden pool.
  for(let i=0;i<3;i++)box(4,.12+i*.08,6.2-i*.3,4,.15,.75,pal.edge);
  box(10,.35,-4,2.2,.18,8,pal.water);group('entry');
@@ -1208,7 +1296,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  let fb=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,fb);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,shadowTex,0);gl.drawBuffers([gl.NONE]);gl.readBuffer(gl.NONE);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
  gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);
  const lightVP=M.mul(M.ortho(-39,39,-36,42,1,145),M.look([-39,74,43],[0,8,0],[0,1,0]));
- const U={};for(let [key,p,names] of [['main',prog,['uModel','uVP','uLight','uEye','uShadowMap','uNight','uBlueprint','uCut','uStudio','uInterior']],['depth',depth,['uModel','uVP']]]){U[key]={};names.forEach(n=>U[key][n]=gl.getUniformLocation(p,n));}
+ const U={};for(let [key,p,names] of [['main',prog,['uModel','uVP','uLight','uEye','uShadowMap','uNight','uBlueprint','uCut','uStudio','uInterior','uFloorPreview']],['depth',depth,['uModel','uVP']]]){U[key]={};names.forEach(n=>U[key][n]=gl.getUniformLocation(p,n));}
  function isVisible(g){
   if(state.layers[g.name]===false)return false;
   if(g.name==='construction-floor'&&state.build>.985)return false;
@@ -1233,7 +1321,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
   if(floor||roof){
    const k=roof?state.floorCount:g.floorIndex,local=state.build>=.999?1:Math.min(1,Math.max(.001,state.build*(state.floorCount+1)-k));
    const y=g.baseY+g.baseY*state.explode*.68,mat=M.model(state.yaw,y,local);
-   if(g.name==='floor-detail'){const d=state.floorSlide*25;mat[12]+=.8*d;mat[14]-=.6*d;}
+   if(g.name==='floor-detail'){const d=state.floorSlide*25;mat[12]-=.86*d;mat[14]+=.52*d;}
    return mat;
   }
   return M.model(state.yaw);
@@ -1246,11 +1334,11 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  }
  function render(){let rect=canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,1.7);let w=Math.max(1,Math.round(rect.width*ratio)),h=Math.max(1,Math.round(rect.height*ratio));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
  let aspect=w/h;let modelHeight=state.type==='complementares'?10:state.type==='interior'?3.5:(configs[state.type]||configs.residencial).height;let lookY=(modelHeight*.36)+state.explode*3.3;let pitch=state.pitch;let eye=[37*Math.cos(pitch),37*Math.sin(pitch)+lookY,43*Math.cos(pitch)];
- let hh=Math.max(state.type==='complementares'?24:40,(state.type==='complementares'?37:55)/aspect)/state.zoom;let vp=M.mul(M.ortho(-hh*aspect/2,hh*aspect/2,-hh/2,hh/2,.1,200),M.look(eye,[state.floorSlide*5,lookY,state.floorSlide*-3.75],[0,1,0]));
+ let hh=Math.max(state.type==='complementares'?24:40,(state.type==='complementares'?37:55)/aspect)/state.zoom;let vp=M.mul(M.ortho(-hh*aspect/2,hh*aspect/2,-hh/2,hh/2,.1,200),M.look(eye,[-state.floorSlide*4.5,lookY,state.floorSlide*2.5],[0,1,0]));
  if(state.firstPerson){eye=[state.walkX,1.6,state.walkZ];let cos=Math.cos(state.lookPitch),dir=[Math.sin(state.walkYaw)*cos,Math.sin(state.lookPitch),-Math.cos(state.walkYaw)*cos];vp=M.mul(perspective(70*Math.PI/180,aspect,.05,160),M.look(eye,eye.map((x,i)=>x+dir[i]),[0,1,0]));}
  const nextShadowKey=[geometryRevision,state.yaw,state.build,state.structure,state.crane,state.craneLift,state.explode,state.selectedFloor,state.floorSlide,state.onlyFloor,JSON.stringify(state.layers)].join('|');if(nextShadowKey!==shadowKey){gl.bindFramebuffer(gl.FRAMEBUFFER,fb);gl.viewport(0,0,2048,2048);gl.clear(gl.DEPTH_BUFFER_BIT);gl.useProgram(depth);gl.uniformMatrix4fv(U.depth.uVP,false,lightVP);groups.forEach(g=>{if(!g.cast||!isVisible(g))return;if(hiddenByGrowth(g))return;gl.uniformMatrix4fv(U.depth.uModel,false,obj(g));gl.bindVertexArray(g.vao);gl.drawArrays(gl.TRIANGLES,0,g.count);});shadowKey=nextShadowKey;shadowPasses++;}renderedFrames++;
  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,w,h);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(prog);gl.uniformMatrix4fv(U.main.uVP,false,vp);gl.uniformMatrix4fv(U.main.uLight,false,lightVP);gl.uniform3fv(U.main.uEye,eye);gl.uniform1f(U.main.uNight,state.night);gl.uniform1f(U.main.uCut,state.cut);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shadowTex);gl.uniform1i(U.main.uShadowMap,0);
- groups.forEach(g=>{if(!isVisible(g))return;if(hiddenByGrowth(g))return;gl.uniform1f(U.main.uNight,state.night);gl.uniform1f(U.main.uStudio,g.name==='studio'?1:0);gl.uniform1f(U.main.uInterior,state.type==='interior'?1:0);gl.uniformMatrix4fv(U.main.uModel,false,obj(g));gl.bindVertexArray(g.vao);gl.drawArrays(gl.TRIANGLES,0,g.count);});
+ groups.forEach(g=>{if(!isVisible(g))return;if(hiddenByGrowth(g))return;gl.uniform1f(U.main.uNight,state.night);gl.uniform1f(U.main.uStudio,g.name==='studio'?1:0);gl.uniform1f(U.main.uInterior,state.type==='interior'?1:0);gl.uniform1f(U.main.uFloorPreview,g.name==='floor-detail'&&state.selectedFloor>=0?1:0);gl.uniformMatrix4fv(U.main.uModel,false,obj(g));gl.bindVertexArray(g.vao);gl.drawArrays(gl.TRIANGLES,0,g.count);});
  canvas.dataset.rendered='true';dirty=false;}
  let rafHandle=0,boostUntil=0;function scheduleFrame(){if(!stopped&&!xrActive&&!rafHandle)rafHandle=requestAnimationFrame(frame);}
  function frame(t){rafHandle=0;if(stopped||xrActive)return;if(anim){let p=Math.min(1,(t-anim.start)/anim.duration),e=1-Math.pow(1-p,4);Object.keys(anim.to).forEach(k=>{if(typeof anim.to[k]==='number')state[k]=anim.from[k]+(anim.to[k]-anim.from[k])*e});dirty=true;if(p===1)anim=null;}const boosted=t<boostUntil;if(dirty||boosted){render();lastT=t;}if(anim||dirty||boosted)scheduleFrame();}
@@ -1267,8 +1355,8 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
   try{const layer=new XRWebGLLayer(sess,gl,{alpha:true});sess.updateRenderState({baseLayer:layer,depthNear:.01,depthFar:200});let ref=await sess.requestReferenceSpace('local');xrActive=true;
    sess.addEventListener('end',()=>{xrActive=false;xrSession=null;dirty=true;scheduleFrame();});
    const ar=mode==='immersive-ar',sc=ar?.045:state.type==='interior'?1:.07,world=M.identity();world[0]=world[5]=world[10]=sc;world[13]=ar?-.3:-1.6;world[14]=state.type==='interior'&&!ar?0:-1.6;
-   const tick=(t,frame)=>{if(!xrActive)return;sess.requestAnimationFrame(tick);const pose=frame.getViewerPose(ref);if(!pose)return;gl.bindFramebuffer(gl.FRAMEBUFFER,layer.framebuffer);gl.clearColor(ar?0:.96,ar?0:.96,ar?0:.97,ar?0:1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(prog);gl.uniformMatrix4fv(U.main.uLight,false,lightVP);gl.uniform1f(U.main.uNight,state.night);gl.uniform1f(U.main.uCut,1000);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shadowTex);gl.uniform1i(U.main.uShadowMap,0);
-    for(const view of pose.views){const v=layer.getViewport(view);gl.viewport(v.x,v.y,v.width,v.height);gl.uniformMatrix4fv(U.main.uVP,false,M.mul(view.projectionMatrix,view.transform.inverse.matrix));const p=view.transform.position;gl.uniform3fv(U.main.uEye,[p.x,p.y,p.z]);for(const g of groups){if(!isVisible(g)||g.name==='studio')continue;gl.uniformMatrix4fv(U.main.uModel,false,M.mul(world,obj(g)));gl.bindVertexArray(g.vao);gl.drawArrays(gl.TRIANGLES,0,g.count);}}};sess.requestAnimationFrame(tick);return sess;
+   const tick=(t,frame)=>{if(!xrActive)return;sess.requestAnimationFrame(tick);const pose=frame.getViewerPose(ref);if(!pose)return;gl.bindFramebuffer(gl.FRAMEBUFFER,layer.framebuffer);gl.clearColor(ar?0:.96,ar?0:.96,ar?0:.97,ar?0:1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(prog);gl.uniformMatrix4fv(U.main.uLight,false,lightVP);gl.uniform1f(U.main.uNight,state.night);gl.uniform1f(U.main.uCut,1000);gl.uniform1f(U.main.uFloorPreview,0);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shadowTex);gl.uniform1i(U.main.uShadowMap,0);
+    for(const view of pose.views){const v=layer.getViewport(view);gl.viewport(v.x,v.y,v.width,v.height);gl.uniformMatrix4fv(U.main.uVP,false,M.mul(view.projectionMatrix,view.transform.inverse.matrix));const p=view.transform.position;gl.uniform3fv(U.main.uEye,[p.x,p.y,p.z]);for(const g of groups){if(!isVisible(g)||g.name==='studio')continue;gl.uniform1f(U.main.uFloorPreview,g.name==='floor-detail'&&state.selectedFloor>=0?1:0);gl.uniformMatrix4fv(U.main.uModel,false,M.mul(world,obj(g)));gl.bindVertexArray(g.vao);gl.drawArrays(gl.TRIANGLES,0,g.count);}}};sess.requestAnimationFrame(tick);return sess;
   }catch(e){await sess.end();xrActive=false;dirty=true;scheduleFrame();throw e;}
  }
  function move(dx,dz){let x=state.walkX+dx,z=state.walkZ+dz;const valid=(a,b)=>a>-5.65&&a<5.4&&b>-4.6&&b<4.5&&!(a>-4.1&&a<-1.45&&b>-2&&b<2.15)&&!(a>1.75&&a<3.65&&b>1.1&&b<4.2)&&!(a>4.8&&b>-2);if(valid(x,z)){state.walkX=x;state.walkZ=z;}else if(valid(x,state.walkZ))state.walkX=x;else if(valid(state.walkX,z))state.walkZ=z;dirty=true;scheduleFrame();}
@@ -2172,7 +2260,7 @@ const services=[
  {short:'Vendas',name:'Do interesse à decisão.',tag:'07 · Vendas e estoque',desc:'Organize o atendimento e a disponibilidade das unidades ao longo da comercialização.',items:['Funil de atendimento','Disponibilidade de unidades','Indicadores comerciais'],icon:['people','plan','chart']}
 ];
 function home(){return `<section class="chapter chapter-home" aria-labelledby="home-title"><div class="home-heading"><h1 id="home-title">Seu terreno.<br> <span>Uma nova perspectiva.</span></h1><p>Veja o que construir, quanto pode custar e por onde começar.</p><div class="actions"><button class="button" data-land="hub">Analisar meu terreno</button><button class="text-button" data-chapter="3">Ver a entrega <span aria-hidden="true">›</span></button></div><div class="free">Uma ideia começa aqui, estudo preliminar sem compromisso.</div></div><span class="demo-label"></span></section>`;}
-function possibility(){return `<section class="chapter split-chapter enhanced-possibility" aria-labelledby="possibility-title"><div class="copy"><div class="eyebrow">01. Enxergue as possibilidades.</div><h2 id="possibility-title">Um terreno.<br> Vários caminhos.</h2><p>Explore o empreendimento.<br> Depois, veja cada andar.</p><div class="possibility-options" aria-label="Exemplos de empreendimento">${Object.entries(variants).map(([k,v])=>`<button class="possibility-option" data-variant="${k}" aria-pressed="${state.variant===k}"><span class="radio" aria-hidden="true"></span><span><strong>${v.label}</strong><small>${v.desc}</small></span></button>`).join('')}</div><p class="fine">Modelos conceituais. Usos e dimensões dependem de análise técnica.${state.completed?' <strong>Seus dados já acompanham esta sessão.</strong>':''}</p><button class="legal-link" data-land="legal-report">${ICLand.status().label} ↗</button><button class="text-button" style="font-size:11px;padding:0;min-height:25px" data-land="envelope">Explorar envelope informado ↗</button></div><div class="model-caption"><strong>${variants[state.variant].caption}</strong>${['loteamento','chacaras','desmembramento'].includes(state.variant)?'Desenho didático · lotes sem dimensão legal atribuída.':'Explore o andar selecionado pela lateral.'}</div><div class="floor-explorer interactive" ${['loteamento','chacaras','desmembramento'].includes(state.variant)?'hidden':''}><div class="floor-toolbar"><label for="floor-select">Andar</label><select id="floor-select" aria-label="Selecionar pavimento para inspeção"><option value="-1">Edifício completo</option>${Array.from({length:architecture?.state.floorCount||({casa:2,casas:2,logistico:1,hotel:7,studios:10,misto:6,comercial:6,multi:6}[state.variant]||8)},(_,i)=>`<option value="${i}" ${state.selectedFloor===i?'selected':''}>${i===0?'Térreo':i+'º pavimento'}</option>`).join('')}</select><button class="floor-action" data-action="isolate-floor" aria-pressed="${state.onlyFloor}" ${state.selectedFloor<0?'disabled':''}>${state.onlyFloor?'Ver conjunto':'Isolar andar'}</button></div><div class="floor-offset" ${state.selectedFloor<0?'hidden':''}><label for="floor-offset">Afastar para a lateral</label><input id="floor-offset" type="range" min="0" max="1.25" step="0.01" value="${architecture?.state.floorSlide||1}" aria-label="Afastamento lateral do pavimento"><span>Arraste o controle ↔</span></div></div><div class="model-controls interactive"><button class="soft-button" data-action="explode" ${['loteamento','chacaras','desmembramento'].includes(state.variant)?'hidden':''} aria-pressed="${state.explode}">${ico('layers')}<span>${state.explode?'Reunir pavimentos':'Separar pavimentos'}</span></button><button class="soft-button" data-action="night" aria-pressed="${state.night}">${ico('sun')}<span>${state.night?'Apagar luzes':'Acender luzes'}</span></button></div></section>`;}
+function possibility(){return `<section class="chapter split-chapter enhanced-possibility" aria-labelledby="possibility-title"><div class="copy"><div class="eyebrow">01. Enxergue as possibilidades.</div><h2 id="possibility-title">Um terreno.<br> Vários caminhos.</h2><p>Explore o empreendimento.<br> Depois, veja cada andar.</p><div class="possibility-options" aria-label="Exemplos de empreendimento">${Object.entries(variants).map(([k,v])=>`<button class="possibility-option" data-variant="${k}" aria-pressed="${state.variant===k}"><span class="radio" aria-hidden="true"></span><span><strong>${v.label}</strong><small>${v.desc}</small></span></button>`).join('')}</div><p class="fine">Modelos conceituais. Usos e dimensões dependem de análise técnica.${state.completed?' <strong>Seus dados já acompanham esta sessão.</strong>':''}</p><button class="legal-link" data-land="legal-report">${ICLand.status().label} ↗</button><button class="text-button" style="font-size:11px;padding:0;min-height:25px" data-land="envelope">Explorar envelope informado ↗</button></div><div class="model-caption"><strong>${variants[state.variant].caption}</strong>${['loteamento','chacaras','desmembramento'].includes(state.variant)?'Desenho didático · lotes sem dimensão legal atribuída.':'Explore o andar selecionado pela lateral.'}</div><div class="floor-explorer interactive" ${['loteamento','chacaras','desmembramento'].includes(state.variant)?'hidden':''}><div class="floor-toolbar"><label for="floor-select">Andar</label><select id="floor-select" aria-label="Selecionar pavimento para inspeção"><option value="-1">Edifício completo</option>${Array.from({length:architecture?.state.floorCount||({casa:2,casas:2,logistico:1,hotel:7,studios:10,misto:6,comercial:6,multi:6}[state.variant]||8)},(_,i)=>`<option value="${i}" ${state.selectedFloor===i?'selected':''}>${i===0?'Térreo':i+'º pavimento'}</option>`).join('')}</select><button class="floor-action" data-action="isolate-floor" aria-pressed="${state.onlyFloor}" ${state.selectedFloor<0?'disabled':''}>${state.onlyFloor?'Ver conjunto':'Isolar andar'}</button></div><div class="floor-offset" ${state.selectedFloor<0?'hidden':''}><label for="floor-offset">Abrir à esquerda</label><input id="floor-offset" type="range" min="0" max="1.25" step="0.01" value="${architecture?.state.floorSlide||1}" aria-label="Abrir pavimento à esquerda"><span>Deslize o pavimento ↔</span></div></div><div class="model-controls interactive"><button class="soft-button" data-action="explode" ${['loteamento','chacaras','desmembramento'].includes(state.variant)?'hidden':''} aria-pressed="${state.explode}">${ico('layers')}<span>${state.explode?'Reunir pavimentos':'Separar pavimentos'}</span></button><button class="soft-button" data-action="night" aria-pressed="${state.night}">${ico('sun')}<span>${state.night?'Apagar luzes':'Acender luzes'}</span></button></div></section>`;}
 function finance(){const html=`<section class="chapter chapter-finance" aria-labelledby="finance-title"><div class="copy"><div class="eyebrow">02. Coloque as premissas à prova.</div><h2 id="finance-title">Entenda a conta.<br> <span style="color:#86868b">Antes de investir.</span></h2><p>${state.simulation.active?'Os dados informados no início. Agora, em perspectiva.':'Uma conta de exemplo. Comece o cadastro para simular com seus dados.'}</p><div class="scenario-recap"><div><span>Área construída</span><strong>${dec(state.simulation.builtArea,0)} m²</strong></div><div><span>Área vendável / privativa</span><strong>${dec(state.simulation.sellableArea,0)} m²</strong></div><div><span>Venda / m²</span><strong id="price-output">${money(state.price)}</strong></div><div><span>Construção / m²</span><strong id="cost-output">${money(state.cost)}</strong></div></div><p class="fine">Premissas fictícias: 1.800 m² de área vendável, 2.400 m² de construção, R$ 1.800.000,00 de terreno e R$ 1.400.000,00 de outras despesas.</p><button class="text-button" data-action="assumptions" style="font-size:12px;margin-top:8px">Entender as premissas <span aria-hidden="true">+</span></button></div><div class="finance-panel"><div class="finance-top"><span>Cenário residencial</span><span class="demo-badge">Exemplo, não avaliação</span></div><div class="big-number" id="revenue">R$ 14.760.000,00</div><div class="number-label">Receita potencial de vendas</div><div class="finance-chart"><div class="chart-row"><span>Terreno</span><div class="bar-track"><span id="bar-land"></span></div><strong>R$ 1.800.000,00</strong></div><div class="chart-row"><span>Construção</span><div class="bar-track"><span id="bar-build"></span></div><strong id="build-value"></strong></div><div class="chart-row"><span>Outras despesas</span><div class="bar-track"><span id="bar-other"></span></div><strong>R$ 1.400.000,00</strong></div><div class="chart-row accent"><span>Custo total</span><div class="bar-track"><span id="bar-total"></span></div><strong id="total-value"></strong></div></div><div class="finance-result" aria-live="polite"><div><span>Saldo ilustrativo</span><strong id="balance"></strong></div><div class="percentage" id="margin"></div></div><p class="fine" id="finance-disclaimer">Antes de tributos sobre a receita, financiamento e efeitos do prazo. Não é lucro líquido, promessa de retorno ou viabilidade aprovada.</p></div></section>`;return ICExtras.financeView(html);}
 function delivery(){return `<section class="chapter chapter-delivery refined-delivery" aria-labelledby="delivery-title"><div class="copy"><div class="eyebrow">03. Clareza para decidir. Experiências para apresentar.</div><h2 id="delivery-title">Sua próxima decisão.<br> <span style="color:#86868b">Em um estudo.</span></h2><p>Entenda o terreno. Veja os números. Experimente como o empreendimento pode ser apresentado.</p><div class="delivery-features"><span>${ico('plan')} Ocupação e entorno</span><span>${ico('chart')} Cenário econômico</span><span>${ico('layers')} Mídias imersivas</span></div><div class="actions"><button class="button" data-action="open-report">Abrir o estudo <span aria-hidden="true">↗</span></button><button class="text-button" data-action="start">Analisar meu terreno ›</button></div><p class="fine">Amostra demonstrativa. O estudo preliminar é a porta de entrada; projetos e produção de mídias são escopos separados. Não há análise automática do terreno.</p></div><div class="delivery-browser"><div class="delivery-browser-top"><span>Explore a entrega</span><span class="demo-badge">Demonstração</span></div><nav class="delivery-nav" aria-label="Prévia das entregas">${[['estudo','Estudo'],['0','Imagens'],['7','Plantas'],['1','Vídeo'],['2','3D + RA'],['6','Gamificação']].map(([k,l])=>`<button type="button" data-delivery="${k}" aria-pressed="${state.deliveryMode===k}">${l}</button>`).join('')}</nav><div id="delivery-display"></div></div></section>`;}
 function renderDelivery(){ICExtras.cleanup();const d=$('#delivery-display');if(!d)return;
@@ -3012,4 +3100,84 @@ window.IC_PATOS_MARKET=[{"id":"JUCA-TE0584","kind":"market","category":"land","t
  setTimeout(arrange,0);
 })();
 </script>
+<style id="ic-20261008-layout-typologies">
+/* Refinamentos pontuais aprovados - 08/10/2026 */
+@media(min-width:801px){
+ #main[data-chapter="0"] #scene-host canvas,
+ #main[data-chapter="0"] #scene-host img{transform:translateY(19px);transform-origin:center center}
+}
+@media(max-width:800px){
+ #main[data-chapter="0"] #scene-host canvas,
+ #main[data-chapter="0"] #scene-host img{transform:translateY(11px) scale(.91);transform-origin:center 58%}
+}
+@media(max-width:500px){
+ #main[data-chapter="0"] #scene-host canvas,
+ #main[data-chapter="0"] #scene-host img{transform:translateY(9px) scale(.78);transform-origin:center 62%}
+}
+.game-surface .media-fullscreen{top:12px;right:12px;z-index:16}
+.game-surface .game-exit{top:59px;right:12px;z-index:15}
+.game-surface:fullscreen{isolation:isolate}
+.game-surface:fullscreen .media-fullscreen{top:18px;right:18px}
+.game-surface:fullscreen .game-exit{top:65px;right:18px}
+.game-surface .game-gate[hidden],.game-surface .game-exit[hidden]{display:none!important}
+@media(max-width:800px){
+ .game-surface .game-exit{top:57px;right:10px}
+ .game-surface:fullscreen .game-exit{top:65px;right:18px}
+}
+/* Projetos: mostrar corte horizontal sem barra de rolagem */
+.capability-workspace #work-content[data-module="projects"]{
+ overflow:hidden!important;scrollbar-width:none!important;overscroll-behavior:contain;
+ min-height:0!important;padding-bottom:0!important;gap:7px!important
+}
+.capability-workspace #work-content[data-module="projects"]::-webkit-scrollbar{display:none!important}
+.capability-workspace #work-content[data-module="projects"] .work-title{flex:0 0 auto;margin:0!important}
+.capability-workspace #work-content[data-module="projects"] .bim-lab{
+ flex:1 1 auto;min-height:0;overflow:hidden;grid-template-columns:minmax(0,1fr) minmax(260px,300px);gap:16px
+}
+.capability-workspace #work-content[data-module="projects"] .bim-canvas-wrap{min-height:0;min-width:0}
+.capability-workspace #work-content[data-module="projects"] .bim-layer-panel{
+ display:flex;flex-direction:column;justify-content:flex-start;gap:2px;
+ min-height:0;overflow:hidden;padding:9px 12px
+}
+.capability-workspace #work-content[data-module="projects"] .layer-heading{flex:0 0 auto;margin:0 0 3px}
+.capability-workspace #work-content[data-module="projects"] .layer-row{flex:0 0 30px;min-height:28px;padding:2px 0;gap:7px}
+.capability-workspace #work-content[data-module="projects"] .layer-name{font-size:11px;padding:3px 0;min-height:26px}
+.capability-workspace #work-content[data-module="projects"] .layer-explanation{
+ flex:0 1 auto;min-height:0;overflow:hidden;margin:4px 0 0;padding:6px 0 0
+}
+.capability-workspace #work-content[data-module="projects"] .layer-explanation p{font-size:9px;line-height:1.26;margin-top:2px}
+.capability-workspace #work-content[data-module="projects"] .bim-cut{
+ display:flex!important;flex:0 0 auto;flex-direction:column;align-items:stretch;
+ margin-top:auto!important;padding-top:6px!important;gap:2px!important;min-height:52px;font-size:11px
+}
+.capability-workspace #work-content[data-module="projects"] .bim-cut input{min-height:13px;width:100%;margin:1px 0}
+.capability-workspace #work-content[data-module="projects"] .bim-cut .fine{font-size:8px}
+@media(min-width:801px) and (max-height:760px){
+ .capability-workspace #work-content[data-module="projects"] .work-title p{display:none}
+ .capability-workspace #work-content[data-module="projects"] .layer-heading{display:none}
+ .capability-workspace #work-content[data-module="projects"] .layer-row{flex-basis:26px;min-height:25px}
+ .capability-workspace #work-content[data-module="projects"] .layer-explanation p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+ .capability-workspace #work-content[data-module="projects"] .bim-cut .fine{display:none}
+}
+@media(max-width:800px){
+ .capability-workspace #work-content[data-module="projects"] .bim-lab{
+  display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(130px,1fr) auto;gap:7px
+ }
+ .capability-workspace #work-content[data-module="projects"] .bim-layer-panel{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px 7px;overflow:hidden;padding:7px
+ }
+ .capability-workspace #work-content[data-module="projects"] .layer-heading{display:none}
+ .capability-workspace #work-content[data-module="projects"] .layer-row{
+  display:grid;grid-template-columns:18px minmax(0,1fr);min-height:24px;flex:auto;padding:1px 0;float:none;width:auto
+ }
+ .capability-workspace #work-content[data-module="projects"] .layer-row .isolate{grid-column:2;min-height:20px;font-size:8px}
+ .capability-workspace #work-content[data-module="projects"] .layer-name{min-height:19px;font-size:9px;padding:1px 0}
+ .capability-workspace #work-content[data-module="projects"] .layer-explanation{grid-column:1/-1;margin:0;padding:3px 0 0}
+ .capability-workspace #work-content[data-module="projects"] .bim-cut{
+  grid-column:1/-1;display:grid!important;grid-template-columns:auto 1fr;min-height:0;margin:0!important;padding:4px 0 0!important
+ }
+ .capability-workspace #work-content[data-module="projects"] .bim-cut input{grid-column:2;min-width:0}
+ .capability-workspace #work-content[data-module="projects"] .bim-cut .fine{display:none}
+}
+</style>
 </body></html>
