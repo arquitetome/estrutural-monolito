@@ -26,7 +26,8 @@ jobs:
             'fullscreen controls separated': ".game-surface .game-exit{top:59px" in s,
             'BIM horizontal cut visible': "mostrar corte horizontal sem barra de rolagem" in s,
             'favicons present': pathlib.Path('favicon.ico').exists() and pathlib.Path('favicon.png').exists(),
-            'humanized plan preserved': 'const APPROVED_PLAN=' in s
+            'humanized plan preserved': 'const APPROVED_PLAN=' in s,
+            'no second darkening in hero cycle': 'arch.state.night=.18;arch.redraw();},13250' in s and 'arch.animate({night:1},540);},13580' not in s
           }
           for k,v in checks.items(): print(('PASS' if v else 'FAIL')+' '+k)
           if not all(checks.values()):sys.exit(1)
@@ -63,7 +64,7 @@ jobs:
             await page.waitForFunction(()=>window.incorpDebug?.architecture||document.querySelector('.scene-host')?.classList.contains('no-webgl'),{timeout:35000});
             console.log('HOME',await page.evaluate(()=>({has3d:!!window.incorpDebug?.architecture,rendered:document.querySelector('.scene-host canvas')?.dataset.rendered,chapter:document.querySelector('#main')?.dataset.chapter})));
             await page.screenshot({path:'/tmp/incorp-home.png'});
-            // QA real do loop: após a grua sair, a fachada deve ter a iluminação acesa.
+            // QA do loop: iluminação decorativa no começo e cena clara (night=.18) no estágio parado, até o carro sair.
             const heroLightBefore=await page.evaluate(()=>({night:window.incorpDebug?.architecture?.state.night,build:window.incorpDebug?.architecture?.state.build}));
             console.log('HERO LIGHT BEFORE',JSON.stringify(heroLightBefore));
             await page.evaluate(()=>{
@@ -80,7 +81,7 @@ jobs:
             try{
               await page.waitForFunction(()=>{
                 const a=window.incorpDebug?.architecture?.state;
-                return !!a&&a.night>.96&&a.build>.96&&a.crane<.03;
+                return !!a&&a.night>=.16&&a.night<=.21&&a.build>.96&&a.crane<.08;
               },null,{timeout:23000});
             }catch(e){
               const diagnostics=await page.evaluate(()=>({
@@ -113,12 +114,13 @@ jobs:
             await page.screenshot({path:'/tmp/incorp-home-car-moving.png'});
             await sleep(450);
             const carMoving=await page.evaluate(()=>window.incorpDebug.architecture.state.heroCarTravel);
-            if(carStart.active!==1||carStart.night<.95||carMoving<carStart.progress+.018)
-              throw new Error('Car must move while the building is illuminated');
+            if(carStart.active!==1||Math.abs(carStart.night-.18)>.045||carMoving<carStart.progress+.018)
+              throw new Error('Car must move while the scene remains bright');
             await page.waitForFunction(()=>{
               const a=window.incorpDebug?.architecture?.state;
               return a?.heroCarActive===0&&a.heroCarTravel>.985;
             },null,{timeout:9000});
+            if(Math.abs(await page.evaluate(()=>window.incorpDebug.architecture.state.night)-.18)>.045)throw new Error('The scene darkened again before the end of the loop');
             console.log('PASS HERO CAR',JSON.stringify({entered:carStart.progress,advanced:carMoving,
               exited:await page.evaluate(()=>window.incorpDebug.architecture.state.heroCarTravel),
               lights:carStart.night,loopMs:21000}));
