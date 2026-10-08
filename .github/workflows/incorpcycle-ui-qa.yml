@@ -72,10 +72,39 @@ jobs:
               if(['residencial','misto','studios','hotel','comercial','chacaras'].includes(type))await page.screenshot({path:'/tmp/incorp-'+type+'.png'});
             }
             await page.evaluate(()=>window.incorpDebug.changeVariant('residencial'));
-            await page.locator('#floor-select').selectOption('3');
-            await sleep(950);
-            console.log('FLOOR',await page.evaluate(()=>({selected:window.incorpDebug.architecture?.state.selectedFloor,slide:window.incorpDebug.architecture?.state.floorSlide})));
+            const noSelector=await page.locator('#floor-select, .floor-explorer, #floor-offset').count();
+            if(noSelector!==0)throw new Error('Legacy floor selector box must be absent');
+            await page.locator('[data-action="explode"]').click();
+            await sleep(1350);
+            const markers=page.locator('.floor-number-overlay [data-floor-number]');
+            const count=await markers.count();
+            const markerData=await page.evaluate(()=>{
+              const list=[...document.querySelectorAll('.floor-number-overlay [data-floor-number]')];
+              const root=document.querySelector('.floor-number-overlay');
+              return {visible:!!root&&!root.hidden,numbers:list.map(x=>x.textContent.trim()),
+                positions:list.map(x=>({x:x.getBoundingClientRect().left,y:x.getBoundingClientRect().top,within:!!x.getClientRects().length}))};
+            });
+            console.log('FLOOR MARKERS',JSON.stringify(markerData));
+            if(count!==8||!markerData.visible||markerData.positions.some(p=>!p.within||!Number.isFinite(p.x)||!Number.isFinite(p.y)))
+              throw new Error('Floor numbers must be visible, positioned and clickable after separating');
+            await page.locator('[data-floor-number="3"]').click();
+            await sleep(1000);
+            const selected=await page.evaluate(()=>({
+              selected:window.incorpDebug.architecture?.state.selectedFloor,
+              slide:window.incorpDebug.architecture?.state.floorSlide,
+              active:document.querySelector('[data-floor-number="3"]')?.getAttribute('aria-pressed')
+            }));
+            console.log('FLOOR SELECTED',selected);
+            if(selected.selected!==3||selected.slide<.8||selected.active!=='true')
+              throw new Error('Floor 04 did not open to the left');
             await page.screenshot({path:'/tmp/incorp-floor-left.png'});
+            await page.locator('[data-floor-number="3"]').click();
+            await sleep(950);
+            const returned=await page.evaluate(()=>({selected:window.incorpDebug.architecture?.state.selectedFloor,slide:window.incorpDebug.architecture?.state.floorSlide}));
+            if(returned.selected!==-1||returned.slide>.2)throw new Error('Selected floor should return to separated stack');
+            await page.locator('[data-action="explode"]').click();
+            const hidden=await page.locator('.floor-number-overlay').evaluate(x=>x.hidden);
+            if(!hidden)throw new Error('Floor numbers should disappear when floors rejoin');
             await page.evaluate(()=>window.incorpDebug.goChapter(4));
             await sleep(800);
             const bim=await page.evaluate(()=>{const x=document.querySelector('#work-content[data-module="projects"]'), c=x?.querySelector('#bim-cut');let r=c?.getBoundingClientRect(),parent=x?.getBoundingClientRect();return {found:!!x,foundCut:!!c,overflow:x?getComputedStyle(x).overflowY:null,cutBottom:r?.bottom,contentBottom:parent?.bottom,cutFits:!!r&&!!parent&&r.bottom<=parent.bottom+1}});
