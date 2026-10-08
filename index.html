@@ -1340,22 +1340,22 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
    const buttons=overlay.querySelectorAll('[data-floor-number]');
    const bounds=overlay.getBoundingClientRect(),view=canvas.getBoundingClientRect();
    if(!bounds.width||!bounds.height||!view.width||!view.height)return;
-   const yaw=state.yaw,c=Math.cos(yaw),sin=Math.sin(yaw);
+   // Números ancorados no LADO ESQUERDO da visualização,
+   // independentes do giro da maquete e do ângulo da câmera.
    const type=state.type;
-   const anchorX=type==='multi'||type==='casas'||type==='logistico'?-11.2:type==='hotel'||type==='comercial'?-10.8:type==='misto'?-11:type==='studios'?-6.7:type==='casa'?-10:-9;
-   const anchorZ=type==='logistico'?6.8:5.5;
    const count=state.floorCount;
+   const fixedLeft=view.left-bounds.left+Math.max(52,Math.min(170,view.width*.22));
    const coord=[];
    for(const button of buttons){
      const i=Number(button.dataset.floorNumber);
      if(!Number.isInteger(i)||i<0||i>=count)continue;
      const localY=.47+i*(type==='logistico'?6:2.55);
-     const x=c*anchorX+sin*anchorZ,z=-sin*anchorX+c*anchorZ,y=localY*(1+state.explode*.68)+1.30;
-     const nx=vp[0]*x+vp[4]*y+vp[8]*z+vp[12];
-     const ny=vp[1]*x+vp[5]*y+vp[9]*z+vp[13];
-     const nw=vp[3]*x+vp[7]*y+vp[11]*z+vp[15];
+     const y=localY*(1+state.explode*.68)+1.30;
+     // Só a altura vertical acompanha a abertura dos andares.
+     const ny=vp[5]*y+vp[13];
+     const nw=vp[7]*y+vp[15];
      if(!Number.isFinite(nw)||Math.abs(nw)<.001)continue;
-     const left=view.left-bounds.left+(nx/nw+1)*view.width*.5-18;
+     const left=fixedLeft;
      const top=view.top-bounds.top+(1-ny/nw)*view.height*.5;
      coord.push({button,left:Math.max(48,Math.min(bounds.width-20,left)),top:Math.max(22,Math.min(bounds.height-22,top))});
    }
