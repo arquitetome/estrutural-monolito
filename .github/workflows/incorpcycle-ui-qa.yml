@@ -63,6 +63,20 @@ jobs:
             await page.waitForFunction(()=>window.incorpDebug?.architecture||document.querySelector('.scene-host')?.classList.contains('no-webgl'),{timeout:35000});
             console.log('HOME',await page.evaluate(()=>({has3d:!!window.incorpDebug?.architecture,rendered:document.querySelector('.scene-host canvas')?.dataset.rendered,chapter:document.querySelector('#main')?.dataset.chapter})));
             await page.screenshot({path:'/tmp/incorp-home.png'});
+            // QA real do loop: após a grua sair, a fachada deve ter a iluminação acesa.
+            const heroLightBefore=await page.evaluate(()=>({night:window.incorpDebug?.architecture?.state.night,build:window.incorpDebug?.architecture?.state.build}));
+            console.log('HERO LIGHT BEFORE',JSON.stringify(heroLightBefore));
+            await page.waitForFunction(()=>{
+              const a=window.incorpDebug?.architecture?.state;
+              return !!a&&a.night>.96&&a.build>.96&&a.crane<.03;
+            },null,{timeout:17000});
+            const heroLightAfter=await page.evaluate(()=>({
+              night:window.incorpDebug?.architecture?.state.night,
+              build:window.incorpDebug?.architecture?.state.build,
+              crane:window.incorpDebug?.architecture?.state.crane
+            }));
+            console.log('HERO LIGHT AFTER',JSON.stringify(heroLightAfter));
+            await page.screenshot({path:'/tmp/incorp-home-lights-on.png'});
             await page.evaluate(()=>window.incorpDebug.goChapter(1));
             const types=['residencial','misto','studios','hotel','comercial','chacaras','casas','logistico','multi'];
             for(const type of types){
