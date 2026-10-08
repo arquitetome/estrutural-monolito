@@ -20,7 +20,7 @@ jobs:
           import re,subprocess,pathlib,sys
           s=pathlib.Path('index.html').read_text()
           checks={
-            'model floor shifts left': "mat[12]-=.86*d" in s,
+            'model floor shifts left': bool(re.search(r"if\(g\.name==='floor-detail'\)\{[^}]*mat\[12\]-=[0-9.]+\*d",s)),
             'site has architecture variants': all(x in s for x in ["if(type==='studios'){w=10.5", "if(type==='hotel'){w=19.2", "if(type==='comercial'){w=18.8", "if(type==='misto'){w=f===0?24"]),
             'dirt rural roads': "Circulações de chácaras: caminhos rurais" in s,
             'fullscreen controls separated': ".game-surface .game-exit{top:59px" in s,
