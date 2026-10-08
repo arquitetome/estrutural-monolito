@@ -974,6 +974,22 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
 
  // Educational model only. No dimensions or code-compliance validation.
  function pipe(a,b,r,mat){let v=b.map((x,i)=>x-a[i]),len=Math.hypot(...v);if(!len)return;v=v.map(x=>x/len);let up=Math.abs(v[1])>.9?[1,0,0]:[0,1,0],u=[v[1]*up[2]-v[2]*up[1],v[2]*up[0]-v[0]*up[2],v[0]*up[1]-v[1]*up[0]],ul=Math.hypot(...u);u=u.map(x=>x/ul);let w=[v[1]*u[2]-v[2]*u[1],v[2]*u[0]-v[0]*u[2],v[0]*u[1]-v[1]*u[0]];for(let i=0;i<12;i++){let th=i*Math.PI/6,th2=(i+1)*Math.PI/6;let n=u.map((x,k)=>x*Math.cos(th)+w[k]*Math.sin(th)),n2=u.map((x,k)=>x*Math.cos(th2)+w[k]*Math.sin(th2));let A=a.map((x,k)=>x+n[k]*r),B=b.map((x,k)=>x+n[k]*r),C=b.map((x,k)=>x+n2[k]*r),D=a.map((x,k)=>x+n2[k]*r);[A,B,C,A,C,D].forEach((x,j)=>vertex(x,j===2||j===4||j===5?n2:n,mat));}}
+
+ function heroCarGeometry(){
+   const paint=[.33,.52,.67,.34,.48],roof=[.76,.84,.87,.36,.32],glass=[.12,.20,.28,.22,.62],
+         rubber=[.10,.12,.14,.97,.04],rim=[.53,.57,.61,.42,.38],
+         headlamp=[1.,.91,.66,.20,1.60],taillamp=[.98,.14,.12,.23,1.55];
+   roundBox(0,.66,0,3.30,.46,1.46,.20,paint);
+   roundBox(.17,1.06,0,1.79,.42,1.28,.22,roof);
+   for(const z of [-.659,.659]){box(.16,1.06,z,1.48,.30,.05,glass);box(.04,1.06,z,.065,.37,.09,roof);}
+   box(-.77,1.06,0,.075,.32,1.03,glass);box(1.03,1.06,0,.075,.31,1.04,glass);
+   for(const x of [-1.08,1.06])for(const z of [-.72,.72]){
+     sphere(x,.36,z,.29,.30,.16,rubber);sphere(x,.36,z+(z<0?-.158:.158),.12,.13,.015,rim);
+   }
+   for(const z of [-.48,.48]){box(-1.68,.72,z,.06,.16,.26,headlamp);box(1.68,.69,z,.055,.15,.26,taillamp);}
+   box(-1.71,.49,0,.09,.13,1.36,roof);box(1.71,.49,0,.09,.13,1.36,roof);
+   group('hero-traffic',0,false);
+ }
  function constructionCrane(){
   const yellow=[.98,.61,.045,.44,.08],yellow2=[.72,.36,.018,.56,.12],cable=[.15,.16,.18,.78,.26],load=[.62,.64,.66,.92,.03];
   const x=15,z=-6,h=25;
@@ -1158,6 +1174,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  // Lot contour: a fine anodised edge on the plinth.
  for(let z of [-11,7.9])box(1,.4,z,24.4,.045,.055,pal.bronze);for(let x of [-11.2,13.2])box(x,.4,-1.55,.055,.045,19,pal.bronze);
  group('context');
+ if(type==='residencial')heroCarGeometry();
  if(['casas','logistico','multi'].includes(type)){campus(type);return;}
  let count=(configs[type]||configs.residencial).floors;
  const skins={
@@ -1290,7 +1307,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  box(10,.35,-4,2.2,.18,8,pal.water);group('entry');
  dirty=true;state.type=type;state.floorCount=count;
  }
- const state={layers:{},cut:1000,firstPerson:false,walkX:0,walkZ:2.6,walkYaw:0,lookPitch:0,yaw:-.17,pitch:.61,zoom:1,build:1,structure:1,crane:0,craneLift:1,explode:0,night:0,type:'residencial',floorCount:8,selectedFloor:-1,floorSlide:0,onlyFloor:false,detailYaw:0};let target={...state},dirty=true,anim=null,stopped=false,lastT=0;
+ const state={layers:{},cut:1000,firstPerson:false,walkX:0,walkZ:2.6,walkYaw:0,lookPitch:0,yaw:-.17,pitch:.61,zoom:1,build:1,structure:1,crane:0,craneLift:1,explode:0,night:0,heroCarActive:0,heroCarTravel:0,type:'residencial',floorCount:8,selectedFloor:-1,floorSlide:0,onlyFloor:false,detailYaw:0};let target={...state},dirty=true,anim=null,stopped=false,lastT=0;
  build(options.type||'residencial');
  const shadowTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,shadowTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.DEPTH_COMPONENT24,2048,2048,0,gl.DEPTH_COMPONENT,gl.UNSIGNED_INT,null);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
  let fb=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,fb);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,shadowTex,0);gl.drawBuffers([gl.NONE]);gl.readBuffer(gl.NONE);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
@@ -1298,6 +1315,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  const lightVP=M.mul(M.ortho(-39,39,-36,42,1,145),M.look([-39,74,43],[0,8,0],[0,1,0]));
  const U={};for(let [key,p,names] of [['main',prog,['uModel','uVP','uLight','uEye','uShadowMap','uNight','uBlueprint','uCut','uStudio','uInterior','uFloorPreview']],['depth',depth,['uModel','uVP']]]){U[key]={};names.forEach(n=>U[key][n]=gl.getUniformLocation(p,n));}
  function isVisible(g){
+  if(g.name==='hero-traffic')return state.type==='residencial'&&state.heroCarActive>.5&&state.heroCarTravel<.985;
   if(state.layers[g.name]===false)return false;
   if(g.name==='construction-floor'&&state.build>.985)return false;
   if(g.name.startsWith('crane-')&&state.crane<=.008)return false;
@@ -1308,6 +1326,11 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
   return true;
  }
  function obj(g){
+  if(g.name==='hero-traffic'){
+   const x=18.8-38*Math.max(0,Math.min(1,state.heroCarTravel)),z=10.45;
+   const c=Math.cos(state.yaw),si=Math.sin(state.yaw),mat=M.model(state.yaw);
+   mat[12]=c*x+si*z;mat[14]=-si*x+c*z;return mat;
+  }
   const floor=['floor','floor-detail'].includes(g.name),roof=g.name==='roof',structure=g.name==='construction-floor';
   if(structure){
    const k=g.floorIndex,local=state.structure>=.999?1:Math.min(1,Math.max(.001,state.structure*(state.floorCount+1)-k));
@@ -1402,7 +1425,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  groups.forEach(g=>{if(!isVisible(g))return;if(hiddenByGrowth(g))return;gl.uniform1f(U.main.uNight,state.night);gl.uniform1f(U.main.uStudio,g.name==='studio'?1:0);gl.uniform1f(U.main.uInterior,state.type==='interior'?1:0);gl.uniform1f(U.main.uFloorPreview,g.name==='floor-detail'&&state.selectedFloor>=0?1:0);gl.uniformMatrix4fv(U.main.uModel,false,obj(g));gl.bindVertexArray(g.vao);gl.drawArrays(gl.TRIANGLES,0,g.count);});
  canvas.dataset.rendered='true';dirty=false;}
  let rafHandle=0,boostUntil=0;function scheduleFrame(){if(!stopped&&!xrActive&&!rafHandle)rafHandle=requestAnimationFrame(frame);}
- function frame(t){rafHandle=0;if(stopped||xrActive)return;if(anim){let p=Math.min(1,(t-anim.start)/anim.duration),e=1-Math.pow(1-p,4);Object.keys(anim.to).forEach(k=>{if(typeof anim.to[k]==='number')state[k]=anim.from[k]+(anim.to[k]-anim.from[k])*e});dirty=true;if(p===1)anim=null;}const boosted=t<boostUntil;if(dirty||boosted){render();lastT=t;}if(anim||dirty||boosted)scheduleFrame();}
+ function frame(t){rafHandle=0;if(stopped||xrActive)return;if(anim){let p=Math.min(1,(t-anim.start)/anim.duration),e=1-Math.pow(1-p,4);Object.keys(anim.to).forEach(k=>{if(typeof anim.to[k]==='number')state[k]=anim.from[k]+(anim.to[k]-anim.from[k])*(k==='heroCarTravel'?p:e)});dirty=true;if(p===1)anim=null;}const boosted=t<boostUntil;if(dirty||boosted){render();lastT=t;}if(anim||dirty||boosted)scheduleFrame();}
  function animate(to,duration=1100){if(matchMedia('(prefers-reduced-motion:reduce)').matches)duration=0;const now=performance.now();anim={from:{...state},to,start:now,duration:Math.max(1,duration)};boostUntil=Math.max(boostUntil,now+Math.max(1,duration)+100);dirty=true;scheduleFrame();}
  let drag=null,dragPointer=null;canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;dragPointer=e.pointerId;drag={x:e.clientX,y:e.clientY,yaw:state.yaw,pitch:state.pitch,walkYaw:state.walkYaw,lookPitch:state.lookPitch};canvas.dispatchEvent(new CustomEvent('model-interaction'));canvas.setPointerCapture(e.pointerId);anim=null;canvas.classList.add('dragging');});canvas.addEventListener('pointermove',e=>{if(!drag)return;if(state.firstPerson){state.walkYaw=drag.walkYaw-(e.clientX-drag.x)*.006;state.lookPitch=Math.max(-1.1,Math.min(1.1,drag.lookPitch+(e.clientY-drag.y)*.004));dirty=true;scheduleFrame();return;}state.yaw=drag.yaw+(e.clientX-drag.x)*.009;state.pitch=Math.max(.22,Math.min(.96,drag.pitch+(e.clientY-drag.y)*.003));dirty=true;scheduleFrame();});function end(){drag=null;const pointer=dragPointer;dragPointer=null;if(pointer!==null&&canvas.hasPointerCapture(pointer))canvas.releasePointerCapture(pointer);canvas.classList.remove('dragging');}canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);canvas.addEventListener('lostpointercapture',end);
  const obs=new ResizeObserver(()=>{dirty=true;scheduleFrame();});obs.observe(canvas);canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(stopped)return;stopped=true;onFailure?.();});
@@ -1694,7 +1717,7 @@ function setupIntro(){const host=$('#scene-host');host.insertAdjacentHTML('befor
  $('#architecture').addEventListener('model-interaction',stop);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)E.cancelIntro();});
 }
-E.cancelIntro=function(manual=false){introTimers.forEach(clearTimeout);introTimers=[];if(manual){heroTouched=true;}const h=$('#gesture-hint');if(h){h.hidden=true;h.classList.remove('possibility-gesture');const hand=h.querySelector('.swipe-hand'),label=h.querySelector('.gesture-copy');if(hand){hand.style.transform='translateX(-10px) rotate(-7deg)';hand.style.opacity='.2';}if(label){label.style.transform='translateX(0px)';label.style.opacity='.88';}}};
+E.cancelIntro=function(manual=false){introTimers.forEach(clearTimeout);introTimers=[];const a=ctx?.architecture?.();if(a&&a.state.heroCarActive){a.state.heroCarActive=0;a.state.heroCarTravel=0;a.redraw();}if(manual){heroTouched=true;}const h=$('#gesture-hint');if(h){h.hidden=true;h.classList.remove('possibility-gesture');const hand=h.querySelector('.swipe-hand'),label=h.querySelector('.gesture-copy');if(hand){hand.style.transform='translateX(-10px) rotate(-7deg)';hand.style.opacity='.2';}if(label){label.style.transform='translateX(0px)';label.style.opacity='.88';}}};
 function setHeroStep(which){ctx.state.showBuilding=which==='building';$$('.home-control button').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.action===which)));}
 function runGestureRotation(chapter=0){
  const arch=ctx?.architecture(),h=$('#gesture-hint');
@@ -1722,7 +1745,7 @@ function runPossibilityGesture(){
  introTimers.push(setTimeout(()=>runGestureRotation(1),550));
 }
 function runHeroCycle(){const arch=ctx?.architecture();if(ctx?.state.chapter!==0||!arch||$('dialog[open]'))return;
- E.cancelIntro(false);heroTouched=false;introPlayed=true;setHeroStep('land');arch.pause();Object.assign(arch.state,{build:0,structure:0,crane:0,craneLift:0,explode:0,night:0,yaw:-.17,pitch:.61,selectedFloor:-1,floorSlide:0,onlyFloor:false});arch.redraw();
+ E.cancelIntro(false);heroTouched=false;introPlayed=true;setHeroStep('land');arch.pause();Object.assign(arch.state,{build:0,structure:0,crane:0,craneLift:0,explode:0,night:0,heroCarActive:0,heroCarTravel:0,yaw:-.17,pitch:.61,selectedFloor:-1,floorSlide:0,onlyFloor:false});arch.redraw();
  if(matchMedia('(prefers-reduced-motion:reduce)').matches){Object.assign(arch.state,{structure:1,build:1,crane:0,craneLift:1,night:1});arch.redraw();setHeroStep('building');return;}
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.animate({crane:1},850);},700));
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;setHeroStep('building');arch.animate({structure:1,craneLift:1},3000);},1550));
@@ -1732,6 +1755,12 @@ function runHeroCycle(){const arch=ctx?.architecture();if(ctx?.state.chapter!==0
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.animate({night:1},480);},8270));
  // Gesto demonstrativo acontece após as luzes acenderem, sem mudar o ciclo total.
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter===0&&!heroTouched&&!$('dialog[open]'))runGestureRotation(0);},8900));
+ // Luz reacende ao entrar no estágio estático da maquete.
+ introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.animate({night:.18},280);},13250));
+ introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.animate({night:1},540);},13580));
+ // O carro percorre a rua frontal em diagonal, da direita para a esquerda.
+ introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.state.heroCarActive=1;arch.state.heroCarTravel=0;arch.animate({heroCarTravel:1},4550);},14200));
+ introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.state.heroCarActive=0;arch.redraw();},18800));
  // Recomeça automaticamente depois de uma pausa, sem botão manual.
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter===0&&!heroTouched&&!$('dialog[open]'))runHeroCycle();},21000));
 }
