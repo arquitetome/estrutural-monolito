@@ -1,0 +1,44 @@
+name: IncorpCycle HTTPS and favicon diagnostic
+on:
+  push:
+    paths:
+      - .github/workflows/incorp-https-diagnostic.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Public DNS records
+        shell: bash
+        run: |
+          for host in www.incorpcycle.com incorpcycle.com; do
+            echo "=== DNS host: $host ==="
+            for type in CNAME A AAAA CAA NS; do
+              echo "[$type via 1.1.1.1]"
+              dig @1.1.1.1 +time=3 +tries=1 +short "$host" "$type" || true
+              echo "[$type via 8.8.8.8]"
+              dig @8.8.8.8 +time=3 +tries=1 +short "$host" "$type" || true
+            done
+          done
+      - name: TLS certificate and responses
+        shell: bash
+        run: |
+          for host in www.incorpcycle.com incorpcycle.com; do
+            echo "=== TLS $host ==="
+            timeout 15 bash -c 'echo | openssl s_client -connect "$1:443" -servername "$1" -verify_return_error 2>&1' _ "$host" | tail -n 24 || true
+            timeout 15 bash -c 'echo | openssl s_client -connect "$1:443" -servername "$1" 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName' _ "$host" || true
+            echo "=== HTTPS $host ==="
+            curl -Iv --max-time 15 "https://$host/" 2>&1 | tail -n 35 || true
+            echo "=== favicon $host ==="
+            curl -kIs --max-time 15 "https://$host/favicon.png?v=20261008-originalmark" | head -n 24 || true
+          done
+      - name: GitHub Pages published configuration
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl -sS --max-time 15 -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$GITHUB_REPOSITORY/pages" | python3 -c 'import json,sys; d=json.load(sys.stdin); print({k:d.get(k) for k in ("status","cname","html_url","https_enforced","https_certificate","source","message")})'
