@@ -1615,9 +1615,10 @@ function ensureTypes(root=document){$$('button:not([type])',root).forEach(b=>b.t
 function docSymbol(){return '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M37 5H14v54h37V19L37 5Zm0 0v15h14M23 31h19M23 39h19M23 47h11"/></svg>';}
 E.init=function(c){ctx=c;ctx.state.simulation={active:false,landArea:1200,builtArea:2400,sellableArea:1800,landValue:1800000,other:1400000};ensureTypes();setupIntro();};
 E.cleanup=function(){deactivateGame();if(sceneDispose){sceneDispose();sceneDispose=null;}if(model){model.dispose();model=null;}clearInterval(spinTimer);spinTimer=0;cancelAnimationFrame(gameFrame);gameKeys.clear();};
-E.projectsView=function(){return `<div class="work-title"><div><h2>Projetos, camada por camada.</h2><p>Do arquitetônico aos sistemas. Gire, isole e veja o corte.</p></div><span class="demo-badge">Modelo didático</span></div>
-<div class="bim-mobile-bar" role="group" aria-label="Controles de visualização de projetos"><button type="button" class="bim-mobile-panel-toggle" data-ic="bim-panel-toggle" aria-controls="bim-layer-panel" aria-expanded="false"><span>Disciplinas</span><span class="bim-mobile-panel-hint" aria-hidden="true">Selecionar camadas <span>›</span></span></button><label class="bim-mobile-cut"><span>Corte horizontal</span><input id="bim-cut-mobile" type="range" min=".3" max="12" step=".1" value="${cut}" aria-label="Altura do corte horizontal, versão celular"></label></div>
-<div class="bim-lab"><div class="bim-canvas-wrap"><canvas id="bim-canvas" tabindex="0" aria-label="Projetos 3D didáticos. Arraste para girar; use as camadas ao lado."></canvas><div class="bim-gesture-hint" id="bim-gesture-hint" aria-hidden="true"><img id="bim-swipe-hand" alt="" decoding="async"><span>Arraste para explorar</span></div><div class="model-origin">Demonstração didática · sem dimensionamento executivo</div><div class="bim-view-controls"><button data-ic="bim-reset">Reenquadrar</button><button data-ic="bim-top">Vista superior</button><button data-ic="bim-all">Mostrar tudo</button></div></div><aside class="bim-layer-panel" id="bim-layer-panel" aria-label="Disciplinas de projetos"><div class="layer-heading"><h3>Disciplinas</h3><span class="fine">Mostrar · explicar · isolar</span></div>${layerDefs.map(([k,n,color])=>`<div class="layer-row" style="--layer:${color}"><label title="Mostrar ou ocultar ${n}"><input aria-label="Mostrar ${n}" data-ic-layer="${k}" type="checkbox" ${layers[k]?'checked':''}><i></i></label><button class="layer-name" data-ic-explain="${k}" aria-pressed="${activeLayer===k}">${n}</button><button class="isolate" data-ic-isolate="${k}" aria-label="Isolar ${n}">Isolar</button></div>`).join('')}<div class="layer-explanation" id="layer-explanation">${layerExplanation()}</div><label class="bim-cut">Corte horizontal <input type="range" id="bim-cut" min=".3" max="12" step=".1" value="${cut}" aria-label="Altura do corte didático"><span class="fine">Só visualização. Não verifica interferências.</span></label></aside></div>`;};
+E.projectsView=function(){return `<div class="work-title"><div><h2>Coordenação BIM.</h2><p>Projetos reais da PRAGMA integrados: arquitetura e disciplinas técnicas alinhadas em um único modelo.</p></div></div>
+<div class="pragma-bim-integration" role="region" aria-label="Visualização federada de projetos arquitetônicos da PRAGMA">
+<iframe class="pragma-bim-iframe" src="./pragma-bim.html" loading="eager" allow="fullscreen" allowfullscreen title="Projetos arquitetônicos e complementares da PRAGMA · Visualizador BIM integrado"></iframe>
+</div>`;};
 function layerExplanation(){const x=layerDefs.find(x=>x[0]===activeLayer);return `<strong>${x[3]}</strong><p>${x[4]}</p>`;}
 function mountBim(){
  const c=$('#bim-canvas');if(!c)return;
@@ -3989,6 +3990,39 @@ window.IC_PATOS_MARKET=[{"id":"JUCA-TE0584","kind":"market","category":"land","t
   #main[data-chapter="1"] .possibility-reference-row{gap:7px;justify-content:flex-start;}
   #main[data-chapter="1"] .possibility-reference-row .legal-link,
   #main[data-chapter="1"] .possibility-reference-row .text-button{font-size:10px!important;}
+}
+
+</style>
+<style id="ic-pragma-federated-projects">
+
+/* Integração isolada do visualizador BIM real da PRAGMA – sem modificar outras etapas. */
+.capability-workspace #work-content[data-module="projects"] {
+ display:flex!important;flex-direction:column!important;overflow:hidden!important;
+ min-height:0!important;gap:8px!important;padding-bottom:0!important;
+}
+.capability-workspace #work-content[data-module="projects"] .work-title{
+ margin:0!important;flex:0 0 auto!important;min-height:0!important
+}
+.capability-workspace #work-content[data-module="projects"] .work-title h2{
+ font-size:clamp(19px,2vw,27px)!important
+}
+.capability-workspace #work-content[data-module="projects"] .work-title p{
+ font-size:11px!important;line-height:1.35;margin-top:3px
+}
+.capability-workspace #work-content[data-module="projects"] .pragma-bim-integration{
+ display:flex;position:relative;flex:1 1 auto;min-width:0;min-height:0;
+ height:100%;overflow:hidden;background:#fff;border-radius:15px;border:1px solid #ebe8ee
+}
+.capability-workspace #work-content[data-module="projects"] .pragma-bim-iframe{
+ display:block;border:0;width:100%;height:100%;min-width:0;min-height:0;
+ background:#fff;flex:1 1 auto
+}
+@media(max-width:800px){
+ .capability-workspace #work-content[data-module="projects"]{gap:4px!important;padding-top:6px!important}
+ .capability-workspace #work-content[data-module="projects"] .work-title{display:none!important}
+ .capability-workspace #work-content[data-module="projects"] .pragma-bim-integration{
+  border-radius:9px;flex:1 1 auto;min-height:230px
+ }
 }
 
 </style>
