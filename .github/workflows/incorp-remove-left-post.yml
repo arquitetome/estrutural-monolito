@@ -1,0 +1,50 @@
+name: INCORP CYCLE - remover poste esquerdo
+on:
+  push:
+    paths:
+      - ".github/workflows/incorp-remove-left-post.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  remove-left-post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout existing published site
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - name: Remove post geometry only
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8")
+          old='warmLens=[1.00,.87,.60,.20,2.35],\n         disabledLens=[.54,.54,.50,.88,.08];\n   for(const x of [-14,-7,0,7,14]){'
+          new='warmLens=[1.00,.87,.60,.20,2.35];\n   // Poste da extremidade esquerda removido do modelo inteiro.\n   for(const x of [-7,0,7,14]){'
+          old_lens="box(x,2.895,9.10,.28,.032,.38,x===-14?disabledLens:warmLens);"
+          new_lens="box(x,2.895,9.10,.28,.032,.38,warmLens);"
+          assert s.count(old)==1, f"poste original encontrado {s.count(old)} vezes"
+          assert s.count(old_lens)==1, f"luminaria original encontrada {s.count(old_lens)} vezes"
+          s=s.replace(old,new,1).replace(old_lens,new_lens,1)
+          f=s.index("function heroStreetLighting()")
+          e=s.index("function heroCarGeometry()",f)
+          pole=s[f:e]
+          assert "[-7,0,7,14]" in pole and "[-14,-7" not in pole and "disabledLens" not in pole
+          assert "for(int j=1;j<5;j++)" in s, "Fachos dos quatro postes precisam permanecer"
+          assert "function heroCarGeometry()" in s and "function runHeroCycle()" in s
+          p.write_text(s,encoding="utf-8")
+          print("PASS: poste x=-14 removido fisicamente, 4 postes existentes, carro e loop preservados")
+          PY
+      - name: Commit one-file fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --check
+          git commit -m "Remove poste esquerdo da cena da rua"
+          git push origin HEAD:main
