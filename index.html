@@ -1020,7 +1020,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  // e difusores emissivos; sem deslocar árvores, edifício ou via.
  function heroStreetLighting(type='residencial'){
    const ruralSite=['loteamento','chacaras','desmembramento'].includes(type);
-   const poleZ=ruralSite?9.48:8.30,luminaireZ=poleZ+.80;
+   const poleZ=type==='misto'?8.66:8.30,luminaireZ=poleZ+.80;
    const steel=[.25,.29,.31,.56,.22],
          arm=[.39,.42,.43,.47,.17],
          warmLens=[1.00,.87,.60,.20,2.35];
@@ -1179,34 +1179,65 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
 
  function subdivision(type){
   box(0,-.77,0,200,.1,200,[.955,.957,.962,1,0]);group('studio',0,false);
-  roundBox(0,-.4,0,37,.70,27,.85,pal.edge);box(0,-.02,0,36.4,.07,26.4,[.62,.67,.48,.94,0]);group('site');
-  heroStreetLighting(type);
+  roundBox(0,-.4,0,37,.70,27,.85,pal.edge);
+  box(0,-.02,0,36.4,.07,26.4,[.62,.67,.48,.94,0]);group('site');
   const rural=type==='chacaras',split=type==='desmembramento';
-  const dirt=[.58,.44,.29,.98,0],rut=[.70,.55,.38,.94,0],darkSoil=[.48,.35,.24,.94,0];
-  // Circulações de chácaras: caminhos rurais em terra, com trilhas de pneus.
-  box(0,.08,11.15,36,.12,3.0,rural?dirt:pal.road);
+  const dirt=[.58,.46,.34,.98,0],rut=[.49,.37,.27,.77,0],shoulder=[.70,.59,.43,.92,0];
+  // Circulações de chácaras: caminhos rurais de terra contínuos, com limites nítidos, sem sobreposição de lotes.
+  if(rural){
+   box(0,.098,11.15,36,.13,3.30,shoulder);
+   box(0,.132,11.15,36,.14,3.00,dirt);
+  }else{
+   box(0,.132,11.15,36,.14,3.00,pal.road);
+  }
   if(!split){
-   box(0,.09,0,rural?3.35:3.8,.13,24,rural?dirt:pal.road);
-   box(0,.10,rural?-1.25:-2.4,34,.13,rural?2.7:3.3,rural?dirt:pal.road);
    if(rural){
-    for(const x of [-.88,.88])box(x,.18,0,.23,.019,23.6,rut);
-    for(const z of [-2.04,-.46])box(0,.18,z,32.5,.019,.17,rut);
-    for(let z=-9;z<10;z+=2.2)box((rand()-.5)*.35,.19,z,.84,.018,.3,darkSoil);
-    for(const side of [-1,1])for(const z of [-7.4,5.2])box(side*3.20,.19,z,3.6,.016,.90,dirt);
+    // Bermas e vias com cotas distintas; as interseções não têm superfícies coincidentes.
+    box(0,.083,0,3.85,.14,24,shoulder);
+    box(0,.104,0,3.35,.14,24,dirt);
+    box(0,.087,-1.25,34.6,.15,3.12,shoulder);
+    box(0,.116,-1.25,34,.14,2.70,dirt);
+    for(const x of [-.73,.73])box(x,.181,0,.12,.012,22.6,rut);
+    for(const z of [-1.83,-.67])box(0,.192,z,33.5,.012,.12,rut);
+    for(const z of [10.62,11.72])box(0,.209,z,35,.012,.13,rut);
+   }else{
+    box(0,.090,0,4.35,.12,24,[.69,.70,.68,.92,0]);
+    box(0,.105,0,3.80,.14,24,pal.road);
+    box(0,.102,-2.4,34.6,.12,3.70,[.69,.70,.68,.92,0]);
+    box(0,.122,-2.4,34,.14,3.30,pal.road);
    }
   }
   const cols=split?4:rural?2:4,rows=split?1:rural?2:3;
-  for(let side of (split?[0]:[-1,1]))for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
-   let w=split?7.6:rural?6.0:3.0,d=split?17:rural?8:5.0;
-   let x=split?-12+col*8:side*(3.8+col*(w+.25)),z=split?-1:row===0?-8.2:row===1?1.75:7.2;
-   if(rural)z=row===0?-7.4:5.2;
-   box(x,.12,z,w,.10,d,[.65+rand()*.06,.70+rand()*.04,.54,.94,0]);
-   for(let zz of [-d/2,d/2])box(x,.20,z+zz,w,.04,.05,pal.edge);
-   for(let xx of [-w/2,w/2])box(x+xx,.20,z,.05,.04,d,pal.edge);
-   if(rural){tree(x+w*.24,.23,z+d*.2,.6);tree(x-w*.2,.23,z-d*.2,.55);}
+  for(const side of (split?[0]:[-1,1]))for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+   const w=split?7.6:rural?6:3,d=split?17:rural?8:5;
+   const x=split?-12+col*8:side*(rural?5.16+col*6.45:3.8+col*3.25);
+   const z=split?-1:rural?(row===0?-7.4:5.2):(row===0?-8.2:row===1?1.75:7.0);
+   box(x,.12,z,w,.10,d,[.65+rand()*.045,.70+rand()*.035,.54,.94,0]);
+   for(const zz of [-d/2,d/2])box(x,.20,z+zz,w,.04,.05,pal.edge);
+   for(const xx of [-w/2,w/2])box(x+xx,.20,z,.05,.04,d,pal.edge);
+   if(rural){tree(x+w*.24,.23,z+d*.2,.60);tree(x-w*.20,.23,z-d*.20,.55);}
   }
-  for(let x of [-16,16])for(let z of [-10,-5,0,5,9])tree(x,.17,z,.7);
-  if(!split){for(let z of [-10,3,8]){box(2.5,1.25,z,.045,2.2,.045,pal.dark);box(2.35,2.35,z,.4,.05,.18,[1.,.84,.58,.3,1.6]);}}
+  for(const x of [-16,16])for(const z of [-10,-5,0,5,9])tree(x,.17,z,.7);
+  if(!split){
+   // Luminárias proporcionais ao lote, com poste cilíndrico e braços apontados para a rua.
+   const steel=[.36,.40,.44,.89,.08],head=[.23,.27,.30,.94,.04],diffuser=[1.00,.90,.72,.27,1.3];
+   function streetPole(x,z,axis){
+    const dx=axis==='z'?(x<0?.56:-.56):0,dz=axis==='x'?.56:0;
+    roundBox(x,.23,z,.25,.20,.25,.045,steel);
+    pipe([x,.27,z],[x,3.12,z],.054,steel);
+    sphere(x,3.13,z,.068,.068,.068,steel);
+    pipe([x,3.12,z],[x+dx,3.12,z+dz],.046,steel);
+    roundBox(x+dx,3.10,z+dz,axis==='z'?.30:.47,.10,axis==='z'?.47:.30,.055,head);
+    box(x+dx,3.035,z+dz,axis==='z'?.22:.39,.018,axis==='z'?.39:.22,diffuser);
+   }
+   // Rua frontal, eixo longitudinal e travessa: iluminação em todo o sistema viário.
+   for(const x of [-13,-7,-3,5,12])streetPole(x,9.42,'x');
+   const side=rural?1.97:2.12;
+   for(const z of [-8.2,-4.8,3.1,7.0])streetPole(-side,z,'z');
+   for(const z of [-7.0,-3.8,2.3,6.4])streetPole(side,z,'z');
+   for(const x of [-12,-5,5,12])streetPole(x,rural?-3.02:-4.44,'x');
+  }
+  // Desmembramento: nenhum poste e nenhuma via interna nova.
   group('parcelas');state.type=type;state.floorCount=0;dirty=true;
  }
  function envelope(){
@@ -1329,7 +1360,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
     box(cx+x,2.47,cz+d/2+.43,3.3,.26,.53,skin.accent);
     box(cx+x+1.58,1.42,cz+d/2+.44,.10,2.06,.19,skin.frame);
    }
-   box(cx,2.51,cz+d/2+1.33,w*.79,.30,2.2,skin.accent);
+   box(cx,2.51,cz+d/2+.80,w*.79,.30,1.15,skin.accent);
   }else if(f===1){
    for(let x=-w/2+1.45;x<w/2-1;x+=3.8)planter(cx+x,.4,cz+d/2+.64,1.5,.45);
   }else{
@@ -1498,7 +1529,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  let rafHandle=0,boostUntil=0;function scheduleFrame(){if(!stopped&&!xrActive&&!rafHandle)rafHandle=requestAnimationFrame(frame);}
  function frame(t){rafHandle=0;if(stopped||xrActive)return;if(anim){let p=Math.min(1,(t-anim.start)/anim.duration),e=1-Math.pow(1-p,4);Object.keys(anim.to).forEach(k=>{if(typeof anim.to[k]==='number')state[k]=anim.from[k]+(anim.to[k]-anim.from[k])*(k==='heroCarTravel'?p:e)});dirty=true;if(p===1)anim=null;}const boosted=t<boostUntil;if(dirty||boosted){render();lastT=t;}if(anim||dirty||boosted)scheduleFrame();}
  function animate(to,duration=1100){if(matchMedia('(prefers-reduced-motion:reduce)').matches)duration=0;const now=performance.now();anim={from:{...state},to,start:now,duration:Math.max(1,duration)};boostUntil=Math.max(boostUntil,now+Math.max(1,duration)+100);dirty=true;scheduleFrame();}
- let drag=null,dragPointer=null;canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;dragPointer=e.pointerId;drag={x:e.clientX,y:e.clientY,yaw:state.yaw,pitch:state.pitch,walkYaw:state.walkYaw,lookPitch:state.lookPitch};canvas.dispatchEvent(new CustomEvent('model-interaction'));canvas.setPointerCapture(e.pointerId);anim=null;canvas.classList.add('dragging');});canvas.addEventListener('pointermove',e=>{if(!drag)return;if(state.firstPerson){state.walkYaw=drag.walkYaw-(e.clientX-drag.x)*.006;state.lookPitch=Math.max(-1.1,Math.min(1.1,drag.lookPitch+(e.clientY-drag.y)*.004));dirty=true;scheduleFrame();return;}state.yaw=drag.yaw+(e.clientX-drag.x)*.009;state.pitch=Math.max(.22,Math.min(.96,drag.pitch+(e.clientY-drag.y)*.003));dirty=true;scheduleFrame();});function end(){drag=null;const pointer=dragPointer;dragPointer=null;if(pointer!==null&&canvas.hasPointerCapture(pointer))canvas.releasePointerCapture(pointer);canvas.classList.remove('dragging');}canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);canvas.addEventListener('lostpointercapture',end);
+ let drag=null,dragPointer=null;canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;dragPointer=e.pointerId;drag={x:e.clientX,y:e.clientY,yaw:state.yaw,pitch:state.pitch,walkYaw:state.walkYaw,lookPitch:state.lookPitch};canvas.dispatchEvent(new CustomEvent('model-interaction'));canvas.setPointerCapture(e.pointerId);anim=null;if(state.build<.999||state.structure<.999){Object.assign(state,{build:1,structure:1,crane:0,craneLift:1});dirty=true;scheduleFrame();}canvas.classList.add('dragging');});canvas.addEventListener('pointermove',e=>{if(!drag)return;if(state.firstPerson){state.walkYaw=drag.walkYaw-(e.clientX-drag.x)*.006;state.lookPitch=Math.max(-1.1,Math.min(1.1,drag.lookPitch+(e.clientY-drag.y)*.004));dirty=true;scheduleFrame();return;}state.yaw=drag.yaw+(e.clientX-drag.x)*.009;state.pitch=Math.max(.22,Math.min(.96,drag.pitch+(e.clientY-drag.y)*.003));dirty=true;scheduleFrame();});function end(){drag=null;const pointer=dragPointer;dragPointer=null;if(pointer!==null&&canvas.hasPointerCapture(pointer))canvas.releasePointerCapture(pointer);canvas.classList.remove('dragging');}canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);canvas.addEventListener('lostpointercapture',end);
  const obs=new ResizeObserver(()=>{dirty=true;scheduleFrame();});obs.observe(canvas);canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(stopped)return;stopped=true;onFailure?.();});
 
  function perspective(fov,a,n,f){const k=1/Math.tan(fov/2),nf=1/(n-f);return new Float32Array([k/a,0,0,0,0,k,0,0,0,0,(f+n)*nf,-1,0,0,2*f*n*nf,0]);}
@@ -1615,9 +1646,9 @@ function ensureTypes(root=document){$$('button:not([type])',root).forEach(b=>b.t
 function docSymbol(){return '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M37 5H14v54h37V19L37 5Zm0 0v15h14M23 31h19M23 39h19M23 47h11"/></svg>';}
 E.init=function(c){ctx=c;ctx.state.simulation={active:false,landArea:1200,builtArea:2400,sellableArea:1800,landValue:1800000,other:1400000};ensureTypes();setupIntro();};
 E.cleanup=function(){deactivateGame();if(sceneDispose){sceneDispose();sceneDispose=null;}if(model){model.dispose();model=null;}clearInterval(spinTimer);spinTimer=0;cancelAnimationFrame(gameFrame);gameKeys.clear();};
-E.projectsView=function(){return `<div class="work-title"><div><h2>Coordenação BIM.</h2><p>Projetos reais da PRAGMA integrados: arquitetura e disciplinas técnicas alinhadas em um único modelo.</p></div></div>
-<div class="pragma-bim-integration" role="region" aria-label="Visualização federada de projetos arquitetônicos da PRAGMA">
-<iframe class="pragma-bim-iframe" src="./pragma-bim.html" loading="eager" allow="fullscreen" allowfullscreen title="Projetos arquitetônicos e complementares da PRAGMA · Visualizador BIM integrado"></iframe>
+E.projectsView=function(){return `<div class="work-title"><div><h2>Coordenação BIM.</h2><p>Arquitetura e disciplinas técnicas coordenadas em um único modelo interativo.</p></div></div>
+<div class="pragma-bim-integration" role="region" aria-label="Visualização integrada de projetos e disciplinas técnicas">
+<iframe class="pragma-bim-iframe" src="./pragma-bim.html?v=20261009-r2" loading="eager" allow="fullscreen" allowfullscreen title="Visualizador de coordenação BIM integrado ao IncorpCycle"></iframe>
 </div>`;};
 function layerExplanation(){const x=layerDefs.find(x=>x[0]===activeLayer);return `<strong>${x[3]}</strong><p>${x[4]}</p>`;}
 function mountBim(){
@@ -1790,7 +1821,7 @@ function setupIntro(){const host=$('#scene-host');host.insertAdjacentHTML('befor
  $('#architecture').addEventListener('model-interaction',stop);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)E.cancelIntro();});
 }
-E.cancelIntro=function(manual=false){introTimers.forEach(clearTimeout);introTimers=[];const a=ctx?.architecture?.();if(a&&a.state.heroCarActive){a.state.heroCarActive=0;a.state.heroCarTravel=0;a.redraw();}if(manual){heroTouched=true;}const h=$('#gesture-hint');if(h){h.hidden=true;h.classList.remove('possibility-gesture');const hand=h.querySelector('.swipe-hand'),label=h.querySelector('.gesture-copy');if(hand){hand.style.transform='translateX(-10px) rotate(-7deg)';hand.style.opacity='.2';}if(label){label.style.transform='translateX(0px)';label.style.opacity='.88';}}};
+E.cancelIntro=function(manual=false){introTimers.forEach(clearTimeout);introTimers=[];const a=ctx?.architecture?.();if(a&&(a.state.build<.999||a.state.structure<.999||a.state.crane>.001)){a.pause();Object.assign(a.state,{build:1,structure:1,crane:0,craneLift:1});a.redraw();}if(a&&a.state.heroCarActive){a.state.heroCarActive=0;a.state.heroCarTravel=0;a.redraw();}if(manual){heroTouched=true;}const h=$('#gesture-hint');if(h){h.hidden=true;h.classList.remove('possibility-gesture');const hand=h.querySelector('.swipe-hand'),label=h.querySelector('.gesture-copy');if(hand){hand.style.transform='translateX(-10px) rotate(-7deg)';hand.style.opacity='.2';}if(label){label.style.transform='translateX(0px)';label.style.opacity='.88';}}};
 function setHeroStep(which){ctx.state.showBuilding=which==='building';$$('.home-control button').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.action===which)));}
 function runGestureRotation(chapter=0){
  const arch=ctx?.architecture(),h=$('#gesture-hint');
@@ -2475,10 +2506,10 @@ function fitScene(){const m=$('#main'),w=m.clientWidth,h=m.clientHeight,small=w<
  if(architecture){architecture.state.zoom=zoom*(state.selectedFloor>=0?.74:state.explode?.67:1);architecture.redraw();}
 }
 function goChapter(index,{history=true,work=null}={}){index=Math.max(0,Math.min(4,index));if(index===4){state.work=work||'projects';}ICExtras.cleanup();ICExtras.cancelIntro?.();const wl=$('.work-layout');if(wl&&wl.closest('#chapter-content'))$('#workspace').append(wl);if($('#work-content'))$('#work-content').innerHTML='';state.chapter=index;if(index<2){state.selectedFloor=-1;state.onlyFloor=false;}$('#main').dataset.chapter=index;$('#chapter-content').innerHTML=renderers[index]();$('#chapter-number').textContent=String(index+1).padStart(2,'0');$('#chapter-title').textContent=chapterNames[index];$('#next-label').textContent=nextNames[index];$('.back-chapter').disabled=index===0;$$('.chapter-dots button').forEach((b,i)=>{if(i===index)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current')});$('#mobile-menu').hidden=true;$('.menu-button').setAttribute('aria-expanded','false');
- if(architecture&&index<2){if(index===0&&state.variant!=='residencial'){state.variant='residencial';architecture.build('residencial');}architecture.state.selectedFloor=-1;architecture.state.onlyFloor=false;architecture.state.floorSlide=0;state.selectedFloor=-1;state.onlyFloor=false;Object.assign(architecture.state,{structure:1,crane:0,craneLift:1});architecture.animate({build:state.showBuilding||index===1?1:0,explode:state.explode&&index===1?1:0,night:index===1&&state.night?1:0,yaw:index===0?-.17:-.35,pitch:.61},950);}
+ if(architecture&&index<2){if(index===0&&state.variant!=='residencial'){state.variant='residencial';architecture.build('residencial');}architecture.state.selectedFloor=-1;architecture.state.onlyFloor=false;architecture.state.floorSlide=0;state.selectedFloor=-1;state.onlyFloor=false;Object.assign(architecture.state,{structure:1,crane:0,craneLift:1});architecture.animate({build:1,explode:state.explode&&index===1?1:0,night:index===1&&state.night?1:0,yaw:index===0?-.17:-.35,pitch:.61},950);}
  if(index===4){$('#cycle-workspace').append($('.work-layout'));renderWork();}if(index===3)renderDelivery();fitScene();ICExtras.onChapter();if(sceneHost.classList.contains('no-webgl'))applyFallback();transition($('#chapter-content'));if(index===2)updateFinance();if(history){try{window.history.replaceState(null,'','#'+['inicio','possibilidades','cenario','entrega','ciclo'][index]);}catch{}}}
 function updateFinance(){ICExtras.updateFinance();}
-function changeVariant(v){if(!variants[v])return;state.variant=v;state.explode=false;state.night=false;state.selectedFloor=-1;state.onlyFloor=false;if(architecture){architecture.build(v);Object.assign(architecture.state,{build:0,selectedFloor:-1,onlyFloor:false,floorSlide:0});architecture.animate({build:1,explode:0,night:0,yaw:v==='casa'?.06:-.35,pitch:.61},1000);}$('#chapter-content').innerHTML=possibility();if(!architecture)applyFallback();fitScene();}
+function changeVariant(v){if(!variants[v])return;state.variant=v;state.explode=false;state.night=false;state.selectedFloor=-1;state.onlyFloor=false;if(architecture){architecture.build(v);Object.assign(architecture.state,{build:1,structure:1,crane:0,craneLift:1,selectedFloor:-1,onlyFloor:false,floorSlide:0});architecture.animate({build:1,explode:0,night:0,yaw:v==='casa'?.06:-.35,pitch:.61},650);}$('#chapter-content').innerHTML=possibility();if(!architecture)applyFallback();fitScene();}
 function openSheet(kicker,title,body){$('#sheet').classList.remove('report-sheet');returnFocus=document.activeElement;$('#sheet-kicker').textContent=kicker;$('#sheet-body').innerHTML=`<h2 id="sheet-title">${title}</h2>${body}`;if(!$('#sheet').open)$('#sheet').showModal();transition($('#sheet-body'));}
 function privacy(){openSheet('Prévia local','Você continua no controle.',`<p>Os campos desta demonstração não são enviados, analisados nem armazenados de forma persistente. Use informações fictícias para testar.</p><p>Os arquivos selecionados permanecem apenas na memória desta sessão. O acesso à rede privada e o compartilhamento de uma oportunidade exigirão autorização separada e controles reais no site publicado.</p><p class="fine">Nenhuma requisição de rede ou ferramenta de rastreamento está integrada a esta prévia. Fechar ou recarregar o HTML descarta os dados.</p>`);}
 function network(){openSheet('Rede privada','Boas conexões.<br> Com o seu consentimento.',`<p>Primeiro, o proprietário conhece o potencial. Depois, decide se deseja buscar parceiros. Oportunidades são preparadas e apresentadas a perfis aprovados.</p><div class="context-list" style="margin:24px 0"><div>${ico('file')}<span><strong>Análise antes da exposição</strong><small>Nenhum terreno é anunciado automaticamente.</small></span></div><div>${ico('lock')}<span><strong>Acesso por aprovação</strong><small>Informações compartilhadas conforme autorização.</small></span></div><div>${ico('people')}<span><strong>Parcerias compatíveis</strong><small>Proprietários, investidores e incorporadores.</small></span></div></div><div class="actions"><button class="button" data-action="access-form">Solicitar acesso</button><button class="text-button" data-action="start">Analisar meu terreno ›</button></div><p class="fine" style="margin-top:20px">Fluxo demonstrativo. Não há ofertas de investimento, login ou dados privados nesta prévia.</p>`);}
@@ -4025,5 +4056,23 @@ window.IC_PATOS_MARKET=[{"id":"JUCA-TE0584","kind":"market","category":"land","t
  }
 }
 
+</style>
+
+<style id="incorp-20261009-correcao">
+#main[data-chapter="4"] .capability-workspace .work-nav>button.active,
+#main[data-chapter="4"] .capability-workspace .work-nav>button[aria-pressed="true"]{
+ background:#0071e3!important;color:#fff!important;border-color:#0071e3!important;
+ box-shadow:0 3px 12px rgba(0,113,227,.16)!important
+}
+#main[data-chapter="4"] .capability-workspace .work-nav>button:not(.active):hover{color:#0065cb!important;background:#e9f3ff!important}
+#main[data-chapter="4"] .capability-workspace .work-nav>button:focus-visible{outline:2px solid #0071e3!important;outline-offset:2px}
+#main[data-chapter="4"] .capability-workspace #work-content[data-module="projects"]{overflow:hidden!important;min-height:0!important}
+.capability-workspace #work-content[data-module="projects"] .pragma-bim-integration{background:#191d24!important;border-color:#323945!important;overflow:hidden!important}
+.capability-workspace #work-content[data-module="projects"] .pragma-bim-iframe{background:#191d24!important;overflow:hidden!important}
+@media(max-width:800px){
+ #main[data-chapter="4"] .capability-workspace #work-content[data-module="projects"] .work-title{display:flex!important;min-height:0!important;margin:0!important}
+ #main[data-chapter="4"] .capability-workspace #work-content[data-module="projects"] .work-title h2{font-size:16px!important;line-height:1!important}
+ #main[data-chapter="4"] .capability-workspace #work-content[data-module="projects"] .work-title p{display:none!important}
+}
 </style>
 </body></html>

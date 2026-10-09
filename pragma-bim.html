@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Coordenação BIM · INCORP CYCLE / PRAGMA</title>
+<title>Coordenação BIM · IncorpCycle</title>
 <style>
 
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0c0910;font-family:Arial,Helvetica,sans-serif;color:#1b1520}button{font:inherit}img{display:block}.track{height:100vh;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none}.track::-webkit-scrollbar{display:none}.panel{position:relative;flex:0 0 100vw;height:100vh;scroll-snap-align:start;overflow:hidden}.k{font-size:10px;line-height:1;letter-spacing:.24em;text-transform:uppercase;font-weight:700}.h{font-family:Georgia,serif;font-weight:400;letter-spacing:-.055em;line-height:.94;margin:0}.p{font-size:clamp(14px,1.15vw,18px);line-height:1.6;margin:18px 0 0;max-width:650px}.logoP{width:76px;height:auto}
@@ -295,9 +295,70 @@ body>section.panel.ar,section.panel.ar{
  }
 }
 </style>
+
+<style id="incorp-20261009-bim-grafite">
+:root{color-scheme:dark}
+html,body{background:#191d24!important;color:#f0f3f8!important;overflow:hidden!important;scrollbar-width:none!important}
+body>section.panel.ar,section.panel.ar{
+ background:#191d24!important;color:#f0f3f8!important;overflow:hidden!important;
+ padding:9px!important;width:100%!important;height:100dvh!important;min-height:0!important
+}
+.pbimHead{display:none!important}
+.pbimLab{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(210px,255px)!important;
+ gap:9px!important;flex:1 1 auto!important;height:100%!important;min-height:0!important;
+ max-height:100%!important;overflow:hidden!important}
+.pbimCanvasWrap{background:#232830!important;border-color:#414953!important;border-radius:14px!important}
+.pbimOrigin{background:rgba(19,23,30,.86)!important;color:#e4ecf4!important}
+.pbimWalkHint{color:#f0f3f8!important;background:rgba(17,21,28,.85)!important}
+.pbimLayers{display:flex!important;flex-direction:column!important;justify-content:space-between!important;
+ padding:6px 9px!important;gap:2px!important;overflow:hidden!important;scrollbar-width:none!important;
+ background:#242a33!important;border:1px solid #3e4753!important;border-radius:13px!important;
+ color:#eff3f9!important;min-height:0!important;max-height:100%!important}
+.pbimLayers h3{font-size:14px!important;color:#eff3f9!important;margin:0!important;flex:none!important}
+.pbimLayers>.fine{display:none!important}
+#layerRows{display:flex!important;flex-direction:column!important;flex:1 1 auto!important;min-height:0!important;justify-content:space-around!important}
+.layer-row{min-height:18px!important;flex:1 1 auto!important;max-height:28px!important;gap:6px!important;border-bottom-color:#3a4450!important}
+.layer-row label,.layer-row label i{width:16px!important;height:16px!important;flex:none!important}
+.layer-name{color:#dde5f0!important;font-size:10px!important;padding:3px 0!important;line-height:1.05!important}
+.layer-name[aria-pressed=true]{color:#71b8ff!important}
+.pbimExplain{min-height:0!important;max-height:43px!important;padding:3px 0!important;overflow:hidden!important;flex:none!important}
+.pbimExplain strong{color:#f4f7fb!important;font-size:10px!important}
+.pbimExplain p{color:#a9b3c1!important;font-size:9px!important;line-height:1.2!important;margin:2px 0!important}
+.pbimCut{margin-top:0!important;padding-top:5px!important;gap:1px!important;border-color:#3a4450!important;color:#e7edf5!important;flex:none!important;font-size:10px!important}
+.pbimCut input{accent-color:#0071e3!important;margin:0!important;height:16px!important}
+.pbimCut small{color:#aab5c3!important;font-size:9px!important}
+.pbimView button{background:rgba(28,35,45,.94)!important;color:#e8eef7!important;border-color:#526071!important}
+.pbimView button.is-active,.pbimView button[aria-pressed=true]{background:#0071e3!important;color:#fff!important;border-color:#0071e3!important}
+.pbimFsBtn{background:rgba(23,30,40,.9)!important;color:#fff!important;border-color:#526071!important}
+#bimLoad.pbimLoad{background:rgba(29,34,42,.96)!important;color:#e9eef5!important}
+#bimLoad #bimLoadText{color:#f5f8fd!important}
+#bimLoad .pragmaV27LoaderCaption,#bimLoad .pragmaV27LoaderPercent{color:#b7c1ce!important}
+#bimLoad .pbimProgress{background:#394454!important}
+#bimLoad .pbimProgress i{background:linear-gradient(90deg,#0071e3,#60bcff)!important}
+.pbimLab:fullscreen,.pbimLab.pbimFullscreenFallback{background:#191d24!important;grid-template-columns:minmax(0,1fr) minmax(210px,265px)!important;overflow:hidden!important}
+@media(max-width:800px){
+ .pbimLab,.pbimLab:fullscreen,.pbimLab.pbimFullscreenFallback{display:flex!important;flex-direction:column!important;gap:5px!important}
+ .pbimCanvasWrap{flex:1 1 auto!important;min-height:120px!important;height:auto!important}
+ .pbimLayers{flex:0 0 auto!important;max-height:32vh!important;min-height:0!important;padding:4px 7px!important}
+ .pbimLayers h3{font-size:11px!important}
+ #layerRows{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:1px 5px!important}
+ .layer-row{min-height:21px!important;max-height:none!important;border-bottom:0!important;gap:3px!important}
+ .layer-name{font-size:9px!important;white-space:normal!important;overflow-wrap:anywhere!important}
+ .layer-row label,.layer-row label i{width:13px!important;height:13px!important}
+ .pbimExplain{display:none!important}
+ .pbimCut{min-height:32px!important}
+ .pbimLab:fullscreen .pbimLayers,.pbimLab.pbimFullscreenFallback .pbimLayers{max-height:32vh!important;min-height:0!important}
+}
+@media(max-height:500px) and (min-width:801px){
+ .pbimLayers{padding:3px 7px!important;gap:0!important}
+ .layer-row{min-height:15px!important;max-height:21px!important}
+ .pbimExplain{display:none!important}
+ .pbimCut{padding-top:2px!important}
+}
+</style>
 </head>
 <body>
-<section class="panel ar" aria-label="Visualizador BIM federado da PRAGMA integrado ao INCORP CYCLE"></section>
-<script type="module" src="./pragma-bim.js"></script>
+<section class="panel ar" aria-label="Visualizador BIM integrado ao IncorpCycle"></section>
+<script type="module" src="./pragma-bim.js?v=20261009-r2"></script>
 </body>
 </html>
