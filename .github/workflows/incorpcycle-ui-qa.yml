@@ -3,6 +3,8 @@ on:
   push:
     paths:
       - "index.html"
+      - "pragma-bim.html"
+      - "pragma-bim.js"
       - ".github/workflows/incorpcycle-ui-qa.yml"
   workflow_dispatch:
 permissions:
@@ -24,7 +26,7 @@ jobs:
             'site has architecture variants': all(x in s for x in ["if(type==='studios'){w=10.5", "if(type==='hotel'){w=19.2", "if(type==='comercial'){w=18.8", "if(type==='misto'){w=f===0?24"]),
             'dirt rural roads': "Circulações de chácaras: caminhos rurais" in s,
             'fullscreen controls separated': ".game-surface .game-exit{top:59px" in s,
-            'BIM horizontal cut visible': "mostrar corte horizontal sem barra de rolagem" in s,
+            'PRAGMA BIM federated viewer': 'pragma-bim-iframe' in s and pathlib.Path('pragma-bim.html').exists() and pathlib.Path('pragma-bim.js').exists(),
             'favicons present': pathlib.Path('favicon.ico').exists() and pathlib.Path('favicon.png').exists(),
             'humanized plan preserved': 'const APPROVED_PLAN=' in s,
             'no second darkening in hero cycle': 'arch.state.night=.18;arch.redraw();},13250' in s and 'arch.animate({night:1},540);},13580' not in s
@@ -43,6 +45,10 @@ jobs:
               print('ERROR on script',count,attrs[:100],chk.stderr[:2000]);sys.exit(1)
             count+=1
           print('PASS JS syntax, script blocks:',count)
+          p=subprocess.run(['node','--check','pragma-bim.js'],capture_output=True,text=True)
+          if p.returncode:
+            print('FAIL PRAGMA BIM module:',p.stderr[:2200]);sys.exit(1)
+          print('PASS PRAGMA BIM viewer JS syntax')
           PY
       - name: Testar WebGL 3D, seleção de andares, painel BIM e gamificação
         shell: bash
@@ -170,9 +176,45 @@ jobs:
             if(!hidden)throw new Error('Floor numbers should disappear when floors rejoin');
             await page.evaluate(()=>window.incorpDebug.goChapter(4));
             await sleep(800);
-            const bim=await page.evaluate(()=>{const x=document.querySelector('#work-content[data-module="projects"]'), c=x?.querySelector('#bim-cut');let r=c?.getBoundingClientRect(),parent=x?.getBoundingClientRect();return {found:!!x,foundCut:!!c,overflow:x?getComputedStyle(x).overflowY:null,cutBottom:r?.bottom,contentBottom:parent?.bottom,cutFits:!!r&&!!parent&&r.bottom<=parent.bottom+1}});
-            console.log('BIM',JSON.stringify(bim));
-            if(!bim.foundCut||bim.overflow!=='hidden'||!bim.cutFits)throw new Error('BIM cut control should be visible without scroll');
+            await page.locator('iframe.pragma-bim-iframe').waitFor({state:'visible',timeout:20000});
+            await page.waitForFunction(()=>{
+              const iframe=document.querySelector('.pragma-bim-iframe');
+              const doc=iframe?.contentDocument;
+              return !!doc?.querySelector('#bimCanvas')&&!!doc?.querySelector('#cutRange')&&!!doc?.querySelector('.pbimLayers');
+            },null,{timeout:30000});
+            const bim=await page.evaluate(()=>{
+              const x=document.querySelector('#work-content[data-module="projects"]'),iframe=x?.querySelector('.pragma-bim-iframe'),
+                d=iframe?.contentDocument,cut=d?.querySelector('#cutRange'),ir=iframe?.getBoundingClientRect(),
+                cr=cut?.getBoundingClientRect();
+              return {found:!!iframe,hasArchitecture:!!d?.querySelector('[data-layer="arch"]'),
+                layers:d?.querySelectorAll('[data-layer]').length,foundCut:!!cut,
+                hasNavigation:!!d?.querySelector('#bimCanvas'),
+                hasFullscreen:!!d?.querySelector('#pbimFsBtn'),
+                overflow:x?getComputedStyle(x).overflowY:null,
+                cutFits:!!ir&&!!cr&&cr.top>=0&&cr.bottom<=ir.height+5};
+            });
+            console.log('PRAGMA BIM FEDERADO',JSON.stringify(bim));
+            if(!bim.found||!bim.hasArchitecture||bim.layers<8||!bim.foundCut||!bim.hasNavigation||!bim.hasFullscreen||bim.overflow!=='hidden')
+              throw new Error('The live PRAGMA BIM viewer, its disciplines or its cutting controls are missing');
+            try{
+              await page.waitForFunction(()=>{
+                const d=document.querySelector('.pragma-bim-iframe')?.contentDocument,
+                  t=d?.getElementById('bimLoadText')?.textContent||'';
+                return t.includes('Visualização pronta')||t.includes('Falha')||t.includes('Não foi possível');
+              },null,{timeout:85000});
+            }catch(e){
+              console.log('PRAGMA BIM LOAD TIMEOUT',await page.evaluate(()=>{
+                const doc=document.querySelector('.pragma-bim-iframe')?.contentDocument;
+                return {loadText:doc?.getElementById('bimLoadText')?.textContent,progress:doc?.getElementById('bimProgressNumber')?.textContent};
+              }));
+              throw e;
+            }
+            const loadState=await page.evaluate(()=>{
+              const doc=document.querySelector('.pragma-bim-iframe')?.contentDocument;
+              return {text:doc?.getElementById('bimLoadText')?.textContent,progress:doc?.getElementById('bimProgressNumber')?.textContent};
+            });
+            console.log('PRAGMA BIM LOAD',JSON.stringify(loadState));
+            if(!loadState.text?.includes('Visualização pronta'))throw new Error('PRAGMA BIM model did not load: '+loadState.text);
             await page.screenshot({path:'/tmp/incorp-projects.png'});
             await page.evaluate(()=>window.incorpDebug.goChapter(3));
             await page.locator('[data-delivery="6"]').click();
