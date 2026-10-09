@@ -356,9 +356,37 @@ body>section.panel.ar,section.panel.ar{
  .pbimCut{padding-top:2px!important}
 }
 </style>
+
+<style id="incorp-20261009-approved-hand">
+/* A mão sobre o BIM é a MESMA imagem SVG da capa do INCORP CYCLE. */
+.pragmaV27DragHand{
+ isolation:isolate!important;z-index:11!important;display:flex!important;
+ flex-direction:column!important;align-items:center!important;gap:5px!important;
+ padding:6px 9px!important;background:transparent!important;border:0!important;
+ color:#fff!important;box-shadow:none!important;text-align:center!important;
+ text-shadow:0 3px 8px rgba(0,0,0,.98),0 0 16px rgba(0,0,0,.90)!important
+}
+.pragmaV27DragHand::before{
+ content:"";position:absolute;inset:-18px -31px;z-index:-1;pointer-events:none;
+ background:radial-gradient(ellipse at center,rgba(0,0,0,.65),rgba(0,0,0,.35) 43%,transparent 80%);
+ filter:blur(7px);border-radius:85%
+}
+.pragmaV27DragHand .incorpExactSwipeHand{
+ display:block!important;width:27px!important;height:39px!important;object-fit:contain!important;
+ filter:brightness(0) invert(1) drop-shadow(0 3px 5px rgba(0,0,0,.95))!important
+}
+.pragmaV27DragHand span{
+ color:#fff!important;white-space:nowrap;font-size:11px!important;font-weight:600!important;
+ text-shadow:0 3px 8px #000,0 0 14px #000!important
+}
+@media(max-width:580px){
+ .pragmaV27DragHand .incorpExactSwipeHand{width:25px!important;height:36px!important}
+ .pragmaV27DragHand span{font-size:10px!important}
+}
+</style>
 </head>
 <body>
 <section class="panel ar" aria-label="Visualizador BIM integrado ao IncorpCycle"></section>
-<script type="module" src="./pragma-bim.js?v=20261009-r2"></script>
+<script type="module" src="./pragma-bim.js?v=20261009-r3"></script>
 </body>
 </html>
