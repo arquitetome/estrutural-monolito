@@ -1,0 +1,78 @@
+name: INCORP CYCLE - QA Leiloes e Mapa Brasil
+on:
+  push:
+    paths:
+      - "index.html"
+      - ".github/workflows/incorpcycle-map-auctions-qa.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser-map:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Testar catalogo nacional, zoom, card e PDFs
+        shell: bash
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          python3 -m http.server 8057 --bind 127.0.0.1 >/tmp/incorp-map-server.log 2>&1 &
+          sleep 2
+          cat > /tmp/incorp-auction-qa.cjs <<'JS'
+          const {chromium}=require(process.cwd()+'/node_modules/playwright');
+          const check=(condition,message)=>{if(!condition)throw Error(message)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--disable-gpu','--disable-software-rasterizer']});
+            const page=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
+            await page.goto('http://127.0.0.1:8057/index.html',{waitUntil:'domcontentloaded',timeout:65000});
+            await page.waitForFunction(()=>!!window.ICPropertyMaps?.debug?.records?.length,{timeout:30000});
+            const startup=await page.evaluate(()=>({
+              records:window.IC_AUCTION_DATA.records.length,
+              states:[...new Set(window.IC_AUCTION_DATA.records.map(r=>r.uf))].sort(),
+              docCount:Object.keys(window.IC_DOSSIERS.documents).length,
+              found:[18,20,19].map(n=>['SPU-AC-019-2026','SPU-AL-018-2026','SPU-DF-020-2026'][[18,20,19].indexOf(n)]).every(id=>window.IC_DOSSIERS.lots[id]?.documents.filter(d=>window.IC_DOSSIERS.documents[d.id]?.format==='PDF').length===6)
+            }));
+            console.log('NATIONAL DATA',JSON.stringify(startup));
+            check(startup.records===153,'Expected 153 identified properties');
+            check(startup.found&&startup.docCount===153,'Expected 18 PNCP documents linked');
+            check(startup.states.join(',')==='AC,AL,DF,MG','Incorrect observed geographic coverage');
+            await page.evaluate(()=>window.ICPropertyMaps.open('auctions','SPU-AC-019-2026'));
+            await page.locator('#property-map-room[open] #icm-balloon:not([hidden])').waitFor({timeout:30000});
+            let view=await page.evaluate(()=>{
+              const a=document.querySelector('#icm-balloon'),s=getComputedStyle(a),d=window.ICPropertyMaps.debug.state;
+              return {visible:!a.hidden,overflow:s.overflow,scrollHeight:a.scrollHeight,clientHeight:a.clientHeight, hasDetails:!!a.querySelector('[data-im-action="expand"]'),hasAnalyze:!!a.querySelector('[data-im-action="analyze-property"]'),state:d.selected?.records[d.index]?.id,cityOverlays:[...document.querySelectorAll('.icm-city-label,.icm-pin-label')].every(x=>getComputedStyle(x).display==='none')}
+            });
+            console.log('SMALL CARD',JSON.stringify(view));
+            check(view.visible&&view.overflow==='hidden'&&view.hasDetails&&!view.hasAnalyze&&view.cityOverlays,'Small card has incorrect UI');
+            check(view.scrollHeight<=view.clientHeight+4,'Small card still overflows vertically');
+            await page.locator('#property-map-room [data-im-action="zoom-in"]').click();
+            view=await page.evaluate(()=>({open:!document.querySelector('#icm-balloon').hidden,selected:window.ICPropertyMaps.debug.state.selected?.records?.[window.ICPropertyMaps.debug.state.index]?.id}));
+            console.log('ZOOM CARD',JSON.stringify(view));
+            check(view.open&&view.selected==='SPU-AC-019-2026','Zoom incorrectly closed the selected card');
+            await page.locator('#icm-balloon [data-im-action="expand"]').click();
+            let details=await page.evaluate(()=>({
+              displayed:!document.querySelector('#icm-detail-shade').hidden,
+              directLinks:[...document.querySelectorAll('#icm-detail-body .icm-doc-direct-link')].map(a=>a.href),
+              analyzeFooter:!!document.querySelector('#icm-detail-footer [data-im-action="analyze-property"]'),
+              state:document.querySelector('#icm-detail-meta')?.textContent
+            }));
+            console.log('DETAIL DOCUMENTS',JSON.stringify(details));
+            check(details.displayed&&!details.analyzeFooter,'Details sheet has a BV analyze action');
+            check(details.directLinks.filter(u=>u.includes('pncp.gov.br/pncp-api/')&&u.includes('/arquivos/')).length===6,'Not all six official PDFs are linked in the details');
+            await page.locator('#icm-detail-tabs [data-im-detail-tab="documents"]').click();
+            const pdfAnchors=await page.locator('#icm-detail-body a[href*="pncp.gov.br/pncp-api/"]').count();
+            console.log('DOCUMENTS TAB PDF LINKS',pdfAnchors);
+            check(pdfAnchors>=6,'Dossier tab lacks direct PNCP PDF links');
+            await page.locator('#icm-detail-footer [data-im-action="collapse"]').click();
+            await page.selectOption('#icm-uf','AL');
+            const uf=await page.evaluate(()=>({filtered:window.ICPropertyMaps.debug.filtered().map(r=>r.uf),selected:document.querySelector('#icm-uf')?.value}));
+            console.log('UF FILTER',JSON.stringify(uf));
+            check(uf.selected==='AL'&&uf.filtered.length===1&&uf.filtered[0]==='AL','UF filtering is incorrect');
+            await page.selectOption('#icm-uf','all');
+            await page.evaluate(()=>window.ICPropertyMaps.debug.state.selected=null);
+            await browser.close();
+            console.log('PASS MAP AUCTION QA: national data, pins, compact card, zoom, details, PDF links, states');
+          })().catch(err=>{console.error(err.stack||err);process.exit(1)});
+          JS
+          node /tmp/incorp-auction-qa.cjs
