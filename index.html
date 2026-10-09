@@ -3412,4 +3412,72 @@ window.IC_PATOS_MARKET=[{"id":"JUCA-TE0584","kind":"market","category":"land","t
 }
 
 </style>
+
+<style id="ic-gamification-copy-overlap-fix-20261008">
+/* Ciclo completo > Marketing e mídias > Gamificação.
+   Escopo exclusivo da gamificação: preserva os demais formatos e o canvas. */
+.capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy{
+  min-width:0;
+  max-width:min(100%,460px);
+  justify-content:center;
+  gap:8px;
+  padding:4px 0;
+}
+.capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy h3{
+  font-size:clamp(24px,2.15vw,30px);
+  line-height:1.14;
+  letter-spacing:-.035em;
+  text-wrap:balance;
+  overflow-wrap:normal;
+}
+.capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy > p{
+  font-size:12.5px;
+  line-height:1.42;
+  margin:0;
+}
+.capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy .media-delivery{
+  font-size:10.5px;
+  line-height:1.43;
+  padding:8px 0;
+}
+.capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy .media-action-area{
+  gap:7px;
+}
+.capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy .game-missions{
+  gap:5px;
+  font-size:10.5px;
+  line-height:1.35;
+}
+.capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy .media-note{
+  font-size:9px;
+  line-height:1.35;
+  margin:0;
+}
+@media(min-width:801px) and (max-height:760px){
+  .capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy{gap:5px}
+  .capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy h3{font-size:25px;line-height:1.12}
+  .capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy > p{font-size:11.5px;line-height:1.35}
+  .capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy .media-delivery{font-size:10px;line-height:1.35;padding:5px 0}
+  .capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy .media-note{font-size:8.5px}
+}
+@media(max-width:800px){
+  .capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy{
+    max-width:100%;
+    flex:0 0 auto;
+    gap:6px;
+    padding:2px 0 8px;
+    justify-content:flex-start;
+  }
+  .capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy h3{
+    font-size:clamp(21px,5vw,27px);
+    line-height:1.14;
+  }
+  .capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy > p{
+    font-size:11.5px;line-height:1.4
+  }
+  .capability-workspace #work-content[data-module="marketing"] .marketing-visual.game-surface + .marketing-copy .media-delivery{
+    font-size:10px;padding:6px 0
+  }
+}
+</style>
 </body></html>
