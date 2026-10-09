@@ -53,6 +53,82 @@ jobs:
             console.log('MOBILE HOTEL SELECT',JSON.stringify(hotel));
             if(hotel.state!=='hotel'||hotel.selected!=='hotel'||hotel.model!=='hotel')throw Error('Selecting hotel did not refresh model');
             await page.screenshot({path:'/tmp/incorp-mobile-possibilities.png'});
+            // MOBILE REGRESSION: same editorial scale, demo note hidden, study button kept.
+            await page.evaluate(()=>window.incorpDebug.goChapter(3));
+            await page.waitForSelector('.refined-delivery .copy',{timeout:15000});
+            const delivery=await page.evaluate(()=>{
+              const root=document.querySelector('.refined-delivery');
+              const eyebrow=root?.querySelector('.copy .eyebrow');
+              const heading=root?.querySelector('.copy h2');
+              const disclaimer=root?.querySelector('.mobile-optional-disclaimer');
+              const study=root?.querySelector('button[data-action="open-report"]');
+              const shown=x=>!!x&&getComputedStyle(x).display!=='none';
+              return {eyebrowFont:eyebrow?parseFloat(getComputedStyle(eyebrow).fontSize):null,
+                headingFont:heading?parseFloat(getComputedStyle(heading).fontSize):null,
+                disclaimerHidden:!!disclaimer&&!shown(disclaimer),studyVisible:shown(study)};
+            });
+            console.log('MOBILE DELIVERY',JSON.stringify(delivery));
+            if(!(delivery.eyebrowFont>=10&&delivery.headingFont>=27&&delivery.disclaimerHidden&&delivery.studyVisible))
+              throw Error('Delivery scale, disclaimer or study button fails mobile regression');
+            await page.screenshot({path:'/tmp/incorp-mobile-delivery.png'});
+            await page.evaluate(()=>window.incorpDebug.goChapter(4,{work:'projects'}));
+            await page.waitForSelector('#bim-cut-mobile',{timeout:18000});
+            const initial=await page.evaluate(()=>{
+              const lab=document.querySelector('#work-content[data-module="projects"] .bim-lab');
+              const panel=document.getElementById('bim-layer-panel');
+              const canvas=document.getElementById('bim-canvas');
+              const nav=[...document.querySelectorAll('.capability-workspace .work-nav > button')];
+              const btn=document.querySelector('[data-ic="bim-panel-toggle"]');
+              const h=document.querySelector('.capability-heading .eyebrow');
+              return {chapter:document.querySelector('#main')?.dataset.chapter,
+                panelHidden:!!panel&&getComputedStyle(panel).display==='none',
+                toggleShown:!!btn&&getComputedStyle(btn).display!=='none',
+                toggleExpanded:btn?.getAttribute('aria-expanded'),
+                canvasHeight:canvas?.getBoundingClientRect().height,
+                mobileCutShown:!!document.getElementById('bim-cut-mobile')&&getComputedStyle(document.querySelector('.bim-mobile-bar')).display!=='none',
+                navCount:nav.length,navWidths:nav.map(n=>n.getBoundingClientRect().width),
+                navCenters:nav.map(n=>({x:n.getBoundingClientRect().x+ n.getBoundingClientRect().width/2,
+                   text:n.textContent.trim(),align:getComputedStyle(n).textAlign})),
+                eyebrowFont:h?parseFloat(getComputedStyle(h).fontSize):null};
+            });
+            console.log('MOBILE PROJECTS COLLAPSED',JSON.stringify(initial));
+            if(initial.chapter!=='4'||!initial.panelHidden||!initial.toggleShown||initial.toggleExpanded!=='false'
+               ||!initial.mobileCutShown||initial.navCount!==5||initial.canvasHeight<125
+               ||Math.max(...initial.navWidths)-Math.min(...initial.navWidths)>3||initial.eyebrowFont<10)
+              throw Error('Mobile 3D expanded layout or proportional module buttons failed');
+            await page.screenshot({path:'/tmp/incorp-mobile-projects-collapsed.png'});
+            await page.click('[data-ic="bim-panel-toggle"]');
+            const expanded=await page.evaluate(()=>{
+              const panel=document.getElementById('bim-layer-panel');
+              const btn=document.querySelector('[data-ic="bim-panel-toggle"]');
+              return {visible:!!panel&&getComputedStyle(panel).display!=='none',
+                expanded:btn?.getAttribute('aria-expanded'),
+                checkboxes:panel?.querySelectorAll('[data-ic-layer]').length};
+            });
+            console.log('MOBILE PROJECTS EXPANDED',JSON.stringify(expanded));
+            if(!expanded.visible||expanded.expanded!=='true'||expanded.checkboxes<7)
+              throw Error('Mobile disciplines cannot be opened and selected');
+            const toggleLayer=await page.evaluate(()=>{
+               const x=document.querySelector('#bim-layer-panel [data-ic-layer="structure"]');
+               const before=x.checked;x.click();
+               return {before,after:x.checked};
+            });
+            if(toggleLayer.before===toggleLayer.after)throw Error('Discipline checkbox is not selectable');
+            await page.evaluate(()=>{
+               const input=document.getElementById('bim-cut-mobile');
+               input.value='6.3';input.dispatchEvent(new Event('input',{bubbles:true}));
+            });
+            const slider=await page.evaluate(()=>({
+              mobile:document.getElementById('bim-cut-mobile').value,
+              old:document.getElementById('bim-cut').value}));
+            if(slider.mobile!==slider.old||slider.mobile!=='6.3')
+              throw Error('Horizontal cut controls are not synchronized');
+            console.log('MOBILE PROJECTS CONTROLS',JSON.stringify({toggleLayer,slider}));
+            await page.screenshot({path:'/tmp/incorp-mobile-projects-expanded.png'});
+            await page.click('[data-ic="bim-panel-toggle"]');
+            if(await page.evaluate(()=>getComputedStyle(document.getElementById('bim-layer-panel')).display)!=='none')
+              throw Error('Mobile panel did not collapse');
+
             // Desktop: menu remains a single select; home buttons retain horizontal layout.
             const desktop=await browser.newPage();
             await desktop.setViewport({width:1440,height:900,deviceScaleFactor:1,isMobile:false});
@@ -63,6 +139,13 @@ jobs:
             const desktopSelect=await desktop.evaluate(()=>document.querySelectorAll('.possibility-options select#typology-select').length);
             console.log('DESKTOP',JSON.stringify({ctaDirection:orientation,selectCount:desktopSelect}));
             if(orientation==='column'||desktopSelect!==1)throw Error('Desktop layout regression');
+            await desktop.evaluate(()=>window.incorpDebug.goChapter(4,{work:'projects'}));
+            const desktopBim=await desktop.evaluate(()=>({
+              toolbar:getComputedStyle(document.querySelector('.bim-mobile-bar')).display,
+              panel:getComputedStyle(document.getElementById('bim-layer-panel')).display
+            }));
+            console.log('DESKTOP PROJECTS',JSON.stringify(desktopBim));
+            if(desktopBim.toolbar!=='none'||desktopBim.panel==='none')throw Error('Desktop BIM panel changed unexpectedly');
             if(errs.length)throw Error('JS runtime errors '+errs.join('; '));
             console.log('PASS MOBILE/ DESKTOP CTA AND TYPOLOGY');
             await browser.close();
