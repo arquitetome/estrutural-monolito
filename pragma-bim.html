@@ -384,9 +384,146 @@ body>section.panel.ar,section.panel.ar{
  .pragmaV27DragHand span{font-size:10px!important}
 }
 </style>
+
+<style id="incorpcycle-bim-palette-20261009-r4">
+/* Identidade INCORP CYCLE: grafite, azul e cinza. Sem violeta herdado. */
+:root{color-scheme:dark!important}
+html,body{background:#191d24!important;color:#edf3fc!important;overflow:hidden!important}
+body>.panel.ar,.panel.ar{
+ --bim:#0071e3!important;
+ padding:5px!important;background:#191d24!important;color:#edf3fc!important;
+ overflow:hidden!important;height:100dvh!important;min-height:0!important;max-height:100dvh!important
+}
+.pbimHead{display:none!important}
+.pbimLab{
+ display:grid!important;grid-template-columns:minmax(0,1fr) minmax(212px,228px)!important;
+ gap:7px!important;flex:1 1 auto!important;width:100%!important;height:100%!important;
+ min-height:0!important;max-height:100%!important;overflow:hidden!important
+}
+.pbimCanvasWrap{
+ position:relative!important;min-height:0!important;min-width:0!important;
+ width:100%!important;height:100%!important;border-radius:13px!important;
+ border:1px solid #394656!important;background:#212832!important;overflow:hidden!important
+}
+.pbimCanvas{width:100%!important;height:100%!important;background:#232830!important}
+.pbimOrigin{
+ position:absolute!important;left:15px!important;top:14px!important;
+ color:#f4f8ff!important;background:rgba(14,21,31,.90)!important;
+ padding:10px 13px!important;border:1px solid rgba(112,159,206,.30)!important;
+ border-radius:10px!important;letter-spacing:.025em!important;font-size:12px!important;
+ line-height:1.15!important;font-weight:650!important;text-transform:none!important;
+ box-shadow:0 6px 16px rgba(0,0,0,.22)!important;z-index:7!important
+}
+/* Comandos de visualização centralizados e legíveis, sem o botão roxo no canto. */
+.pbimView{
+ position:absolute!important;left:50%!important;right:auto!important;top:auto!important;
+ bottom:15px!important;transform:translateX(-50%)!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ gap:4px!important;padding:5px!important;margin:0!important;width:max-content!important;
+ max-width:calc(100% - 24px)!important;flex-wrap:nowrap!important;white-space:nowrap!important;
+ background:rgba(15,22,33,.95)!important;border:1px solid #4f6073!important;
+ border-radius:999px!important;box-shadow:0 8px 26px rgba(0,0,0,.5)!important;
+ z-index:15!important;isolation:isolate!important
+}
+.pbimView button{
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ background:transparent!important;color:#edf3fc!important;border:1px solid transparent!important;
+ border-radius:999px!important;min-width:0!important;min-height:38px!important;
+ padding:10px 15px!important;font:650 11px/1.1 Arial,sans-serif!important;
+ letter-spacing:0!important;text-align:center!important;white-space:nowrap!important;
+ text-shadow:none!important;box-shadow:none!important;opacity:1!important;cursor:pointer
+}
+.pbimView button:hover:not([aria-pressed="true"]){
+ color:#fff!important;background:rgba(63,103,148,.50)!important
+}
+.pbimView button[aria-pressed="true"],
+.pbimView button.is-active{
+ color:#fff!important;background:#0071e3!important;border-color:#197fe8!important;
+ box-shadow:0 3px 12px rgba(0,113,227,.37)!important
+}
+.pbimView button:focus-visible{
+ outline:2px solid #90c8ff!important;outline-offset:2px!important
+}
+.pbimWalkHint{
+ background:rgba(17,25,37,.92)!important;color:#dcecff!important;
+ border:1px solid #415772!important;letter-spacing:.03em!important;box-shadow:0 4px 14px #0005!important
+}
+.pbimFsBtn,.pragmaOrbitPauseBtn{
+ background:rgba(19,30,45,.93)!important;border:1px solid #516b88!important;
+ color:#f2f7ff!important;box-shadow:0 6px 18px rgba(0,0,0,.40)!important
+}
+.pbimFsBtn:hover,.pragmaOrbitPauseBtn:hover{background:#274c78!important;color:#fff!important}
+.pragmaOrbitPauseBtn.paused{
+ background:#0071e3!important;color:#fff!important;border-color:#2b98ff!important
+}
+.pragmaOrbitPauseBtn:focus-visible,.pbimFsBtn:focus-visible{
+ outline:2px solid #90c8ff!important;outline-offset:2px!important
+}
+.pragmaOrbitGuide{
+ background:rgba(17,25,37,.94)!important;color:#f0f6ff!important;
+ border:1px solid #405979!important;box-shadow:0 7px 24px #0007!important;
+ text-shadow:none!important
+}
+.pbimLayers{
+ padding:6px 8px!important;background:#232b35!important;border:1px solid #3a4b5c!important;
+ color:#e8eff9!important;box-shadow:none!important;overflow:hidden!important;
+ scrollbar-width:none!important;gap:2px!important;height:100%!important;min-height:0!important
+}
+.pbimLayers h3{color:#f2f6fb!important;font-size:14px!important}
+.pbimLayers .layer-row{border-bottom-color:#35414f!important}
+.pbimLayers .layer-name{color:#d7e3f1!important;font-size:10px!important;font-weight:500!important}
+.pbimLayers .layer-name[aria-pressed="true"]{color:#7fc2ff!important;font-weight:700!important}
+.pbimLayers .isolate{color:#80c5ff!important}
+.pbimLayers .pbimExplain strong{color:#f2f6fb!important}
+.pbimLayers .pbimExplain p{color:#bac7d7!important}
+.pbimLayers .pbimCut{color:#edf4ff!important;border-top-color:#42536a!important}
+.pbimLayers .pbimCut input{accent-color:#0071e3!important}
+.pbimLayers .pbimCut small{color:#bac7d7!important}
+.pbimLayers .layer-row[data-row="arch"]{
+ border-top:1px solid #53667b!important;margin-top:2px!important
+}
+.pbimLayers .layer-row[data-row="arch"] .layer-name{color:#9fb1c7!important}
+#bimLoad.pbimLoad{background:rgba(27,34,44,.97)!important;color:#e7f1ff!important}
+#bimLoad .pragmaV27LoaderIcon{border-color:#3c4c60!important;border-top-color:#0a84ff!important}
+#bimLoad .pragmaV27LoaderCaption,#bimLoad .pragmaV27LoaderPercent{color:#b9c9dd!important}
+#bimLoad .pbimProgress{background:#394b61!important}
+#bimLoad .pbimProgress i{background:linear-gradient(90deg,#0071e3,#4ba9ff)!important}
+.pbimLab:fullscreen,.pbimLab:-webkit-full-screen,.pbimLab.pbimFullscreenFallback{
+ background:#191d24!important;grid-template-columns:minmax(0,1fr) minmax(212px,242px)!important;
+ padding:7px!important;gap:7px!important;overflow:hidden!important
+}
+@media(max-width:800px){
+ body>.panel.ar,.panel.ar{padding:4px!important}
+ .pbimLab,.pbimLab:fullscreen,.pbimLab.pbimFullscreenFallback{
+  display:flex!important;flex-direction:column!important;gap:4px!important;
+  height:100%!important;min-height:0!important
+ }
+ .pbimCanvasWrap{flex:1 1 auto!important;height:auto!important;min-height:140px!important}
+ .pbimLayers{
+  flex:0 0 auto!important;height:auto!important;min-height:0!important;
+  max-height:30vh!important;padding:4px 6px!important
+ }
+ #layerRows{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ .pbimView{bottom:9px!important;max-width:calc(100% - 12px)!important;padding:4px!important;gap:1px!important}
+ .pbimView button{min-height:34px!important;font-size:10px!important;padding:8px 10px!important}
+ .pbimOrigin{top:9px!important;left:9px!important;font-size:10px!important;padding:7px 10px!important}
+ .pbimLab:fullscreen .pbimLayers,.pbimLab.pbimFullscreenFallback .pbimLayers{
+  max-height:32vh!important;min-height:0!important
+ }
+}
+@media(max-width:360px){
+ .pbimView button{font-size:9px!important;padding:8px 8px!important}
+ .pbimView{bottom:7px!important}
+}
+@media(max-height:510px) and (min-width:801px){
+ .pbimLayers .pbimExplain{display:none!important}
+ .pbimView{bottom:7px!important}
+ .pbimView button{min-height:30px!important;padding:7px 11px!important}
+}
+</style>
 </head>
 <body>
 <section class="panel ar" aria-label="Visualizador BIM integrado ao IncorpCycle"></section>
-<script type="module" src="./pragma-bim.js?v=20261009-r3"></script>
+<script type="module" src="./pragma-bim.js?v=20261009-r4"></script>
 </body>
 </html>
