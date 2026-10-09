@@ -940,17 +940,17 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
   lit+=vec3(1.,.56,.24)*illuminated*(.17+.14*room)*sill*(1.-blinds*3.);
  }
  if(rawMetal>2.2){ // Lampada difusora, acende junto com a iluminação do edifício.
-   lit=base*mix(.62,4.4,smoothstep(.025,.17,uNight));
+   lit=base*mix(.32,4.4,smoothstep(.35,.72,uNight));
  }else if(rawMetal>1.2){lit=base*mix(.75,2.7,uNight);}
  if(abs(rawMetal-.1875)<.001 && n.y>.88){
    // Fachos locais no piso, um sob cada poste e projetados sobre a rua.
    float beam=0.;
-   for(int j=0;j<5;j++){
+   for(int j=1;j<5;j++){
      float px=-14.+float(j)*7.;
      vec2 q=vec2((vLocal.x-px)/2.3,(vLocal.z-9.37)/1.9);
      beam+=exp(-1.6*dot(q,q));
    }
-   float on=smoothstep(.035,.17,uNight);
+   float on=smoothstep(.35,.72,uNight);
    lit+=vec3(1.25,.84,.43)*beam*on*1.48;
  }
  if(rawMetal<.65){
@@ -994,7 +994,8 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  function heroStreetLighting(){
    const steel=[.25,.29,.31,.56,.22],
          arm=[.39,.42,.43,.47,.17],
-         warmLens=[1.00,.87,.60,.20,2.35];
+         warmLens=[1.00,.87,.60,.20,2.35],
+         disabledLens=[.54,.54,.50,.88,.08];
    for(const x of [-14,-7,0,7,14]){
      // Base na calçada (z=8.20), nunca no meio da pista.
      box(x,.24,8.30,.37,.17,.37,steel);
@@ -1002,7 +1003,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
      sphere(x,3.04,8.30,.105,.11,.105,arm);
      pipe([x,3.01,8.30],[x,3.01,9.02],.055,arm);
      roundBox(x,2.98,9.06,.40,.12,.50,.08,arm);
-     box(x,2.895,9.10,.28,.032,.38,warmLens);
+     box(x,2.895,9.10,.28,.032,.38,x===-14?disabledLens:warmLens);
    }
    group('hero-street-lamps',0,true);
  }
@@ -1201,7 +1202,10 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  const footpath=[.84,.84,.80,.93,.1875];
  box(0,.09,10.5,36,.12,3.2,streetPaving);
  box(0,.095,8.24,35.6,.11,1.10,footpath);
- box(-15,.09,-1,3.2,.12,25,pal.road);
+ // A rua lateral fica 2,5 cm sob o pavimento da via frontal e do passeio.
+ // Antes ambas as superfícies coincidiam exatamente na esquina, gerando
+ // z-fighting/falha visual no chão próximo ao desaparecimento do carro.
+ box(-15,.07,-1,3.2,.11,25,streetPaving);
  for(let i=-15;i<=15;i+=3)box(i,.16,10.5,1.4,.025,.07,pal.edge);
  for(let j=-10;j<=8;j+=3)box(-15,.16,j,.07,.025,1.4,pal.edge);
  box(1,.15,-2,24,.22,19,pal.stone);box(1,.30,-2,23.6,.1,18.6,pal.ground);
