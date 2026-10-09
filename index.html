@@ -2489,7 +2489,22 @@ const nextNames=['Explorar possibilidades','Entender os números','Conhecer a en
 let architecture=null,toastTimer,returnFocus=null;
 const sceneHost=$('#scene-host');
 function announce(s){const t=$('#toast');t.textContent=s;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.hidden=true,3600);}
-function transition(el){if(media.matches)return;el.animate([{opacity:0,transform:'translateY(18px)',filter:'blur(4px)'},{opacity:1,transform:'translateY(0)',filter:'blur(0)'}],{duration:el.closest?.('#wizard')?280:450,easing:'cubic-bezier(.22,.8,.22,1)'});}
+function transition(el){
+ if(!el||media.matches)return;
+ if(state.chapter===4){
+  // Etapa com BIM: não desfocar nem transladar o iframe/WebGL inteiro.
+  if(el.id==='work-content')return;
+  if(el.id==='chapter-content'){
+   [el.querySelector('.capability-heading'),el.querySelector('.work-nav')].filter(Boolean)
+    .forEach((node,k)=>node.animate(
+     [{opacity:0,transform:'translate3d(0,12px,0)'},{opacity:1,transform:'translate3d(0,0,0)'}],
+     {duration:320+k*45,easing:'cubic-bezier(.22,.8,.22,1)'}
+    ));
+   return;
+  }
+ }
+ el.animate([{opacity:0,transform:'translateY(18px)',filter:'blur(4px)'},{opacity:1,transform:'translateY(0)',filter:'blur(0)'}],{duration:el.closest?.('#wizard')?280:450,easing:'cubic-bezier(.22,.8,.22,1)'});
+}
 const variants={
 residencial:{label:'Apartamentos',desc:'Residencial multifamiliar',caption:'Residencial conceito'},
 misto:{label:'Uso misto',desc:'Comércio e moradia',caption:'Uso misto conceito'},
@@ -2529,7 +2544,17 @@ function reportContent(){if(state.simulation?.active||state.reportTab===3)return
 function cycle(){return `<section class="chapter chapter-cycle refined-cycle" aria-labelledby="cycle-title"><div class="capability-heading"><div><div class="eyebrow">04. Estratégia, projetos, obra, marketing e vendas.</div><h2 id="cycle-title">Como a IncorpCycle estrutura e apresenta um empreendimento.</h2></div><button class="text-button" data-action="service-request">Conversar sobre uma etapa ›</button></div><div id="cycle-workspace" class="capability-workspace"></div></section>`;}
 function serviceContent(){const s=services[state.service];return `<div class="eyebrow">${s.tag}</div><h3>${s.name.replace('\n','<br> ')}</h3><p>${s.desc}</p><div class="cycle-deliveries">${s.items.map((t,i)=>`<span>${ico(s.icon[i])}${t}</span>`).join('')}</div><div class="actions"><button class="button black" ${state.service===1?'data-ic="open-projects"':state.service===5?'data-ic="open-marketing"':'data-action="work"'}>${state.service===1?'Explorar complementares':state.service===5?'Explorar as mídias':'Explorar o ambiente'}</button><button class="text-button" data-action="service-request">Conversar sobre esta etapa ›</button></div>`;}
 const renderers=[home,possibility,finance,delivery,cycle];
-function fitScene(){const m=$('#main'),w=m.clientWidth,h=m.clientHeight,small=w<=800;let left=0,top=0,width=w,height=h,zoom=1;
+function fitScene(){
+ // Nas etapas 02 a 04, a maquete principal está oculta; não forçar renderização WebGL.
+ if(state.chapter>=2){
+  sceneHost.style.opacity='0';
+  sceneHost.style.visibility='hidden';
+  sceneHost.style.pointerEvents='none';
+  $('.scene-tools').style.display='none';
+  architecture?.pause();
+  return;
+ }
+ const m=$('#main'),w=m.clientWidth,h=m.clientHeight,small=w<=800;let left=0,top=0,width=w,height=h,zoom=1;
  if(state.chapter===0){const heading=$('.home-heading');const headEnd=heading?heading.getBoundingClientRect().bottom-m.getBoundingClientRect().top:270;top=headEnd-10;left=0;width=w;height=Math.max(150,h-top-43);zoom=small?1.08:1.07;}
  if(state.chapter===1){if(small){top=$('.split-chapter .copy').getBoundingClientRect().bottom-m.getBoundingClientRect().top+4;left=0;width=w;height=Math.max(130,h-top-56);zoom=1.03;}else{left=w*.38;top=15;width=w*.62;height=h-45;zoom=.98;}}
  sceneHost.style.left=left+'px';sceneHost.style.top=top+'px';sceneHost.style.width=width+'px';sceneHost.style.height=height+'px';sceneHost.style.opacity=state.chapter<2?'1':'0';sceneHost.style.visibility=state.chapter<2?'visible':'hidden';sceneHost.style.pointerEvents=state.chapter<2?'auto':'none';$('.scene-tools').style.display=state.chapter===0?'none':'flex';
@@ -2578,7 +2603,7 @@ if(state.work==='projects')return ICExtras.projectsView();if(state.work==='marke
 /* INCORP BIM: visualizador persistente. O iframe vive sempre no body, fora dos cards recriados
    e do layout movido entre capítulos. Nunca remontar nem alterar src ao trocar módulos. */
 const ICPersistentBim=(()=>{
- let host=null,frame=null,active=false,raf=0,lastBox='';
+ let host=null,frame=null,active=false,raf=0,lastBox='',resizeObserver=null,observedSlot=null;
  const asset='./pragma-bim.html?v=20261009-r5';
  const ensure=()=>{
   if(host)return;
@@ -2593,6 +2618,11 @@ const ICPersistentBim=(()=>{
   frame.loading='eager';
   host.appendChild(frame);
   document.body.appendChild(host);
+  // A posição do portal acompanha mudanças reais, sem reflows em loop por frame.
+  addEventListener('resize',scheduleAlign,{passive:true});
+  addEventListener('scroll',scheduleAlign,{capture:true,passive:true});
+  window.visualViewport?.addEventListener('resize',scheduleAlign,{passive:true});
+  window.visualViewport?.addEventListener('scroll',scheduleAlign,{passive:true});
   window.ICBimDebug={created:1,get iframe(){return frame;},get visible(){return active&&!host.hidden;}};
  };
  const align=()=>{
@@ -2612,14 +2642,23 @@ const ICPersistentBim=(()=>{
   }
   host.hidden=false;
  };
- const tick=()=>{raf=0;if(!active)return;align();raf=requestAnimationFrame(tick);};
+ const scheduleAlign=()=>{
+  if(!active||raf)return;
+  raf=requestAnimationFrame(()=>{raf=0;if(active)align();});
+ };
  return {
   show(){
-   ensure();active=true;lastBox='';align();
-   if(!raf)raf=requestAnimationFrame(tick);
+   ensure();active=true;lastBox='';
+   const slot=document.querySelector('#work-content[data-module="projects"] .pragma-bim-integration');
+   if(!resizeObserver&&typeof ResizeObserver!=='undefined')resizeObserver=new ResizeObserver(scheduleAlign);
+   resizeObserver?.disconnect();
+   observedSlot=slot;
+   if(observedSlot)resizeObserver?.observe(observedSlot);
+   scheduleAlign();
   },
   hide(){
    active=false;if(host)host.hidden=true;
+   resizeObserver?.disconnect();observedSlot=null;
    if(raf){cancelAnimationFrame(raf);raf=0}
   }
  };
