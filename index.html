@@ -938,7 +938,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  const fs=`#version 300 es
  precision highp float;
  in vec3 vNormal,vPosition,vColor,vLocal;in vec2 vMaterial;in vec4 vShadow;out vec4 outColor;
- uniform sampler2D uShadowMap;uniform vec3 uEye;uniform float uNight,uBlueprint,uCut,uStudio,uInterior,uFloorPreview;
+ uniform sampler2D uShadowMap;uniform vec3 uEye;uniform float uNight,uBlueprint,uCut,uStudio,uInterior,uFloorPreview,uParcelRoad;
  float hash(vec3 p){return fract(sin(dot(p,vec3(12.9898,78.233,45.164)))*43758.5453);}
  float shadow(){vec3 p=vShadow.xyz/vShadow.w*.5+.5;if(p.x<0.||p.x>1.||p.y<0.||p.y>1.||p.z>1.)return 1.;float sum=0.;float bias=max(.00065,.0017*(1.-max(dot(normalize(vNormal),normalize(vec3(-.5,1.,.4))),0.)));for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++){float d=texture(uShadowMap,p.xy+vec2(x,y)/2048.).r;sum+=p.z-bias<d?1.:.20;}return sum/9.;}
  vec3 sky(vec3 d){float h=clamp(d.y*.65+.35,0.,1.);return mix(vec3(.11,.15,.19),mix(vec3(.48,.63,.77),vec3(.87,.92,.97),pow(1.-h,2.)),h);}
@@ -979,6 +979,28 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
    }
    float on=smoothstep(.35,.72,uNight);
    lit+=vec3(1.25,.84,.43)*beam*on*1.48;
+ }
+ if(uParcelRoad>.5 && abs(rawMetal-.15625)<.002 && n.y>.88){
+   // Fachos noturnos projetados SOMENTE no leito das ruas do loteamento e das chácaras.
+   // Cada poste tem uma fonte emissiva e uma mancha suave correspondente sobre o pavimento.
+   float beam=0.;
+   for(int j=0;j<5;j++){
+     float fx=j==0?-13.:j==1?-7.:j==2?-3.:j==3?5.:12.;
+     vec2 q=(vLocal.xz-vec2(fx,12.25))/vec2(2.15,1.4);
+     beam+=exp(-1.3*dot(q,q));
+   }
+   for(int j=0;j<4;j++){
+     float zl=j==0?-8.2:j==1?-4.8:j==2?3.1:7.;
+     float zr=j==0?-7.:j==1?-3.8:j==2?2.3:6.4;
+     vec2 ql=(vLocal.xz-vec2(-1.41,zl))/vec2(1.22,1.9);
+     vec2 qr=(vLocal.xz-vec2(1.41,zr))/vec2(1.22,1.9);
+     beam+=exp(-1.35*dot(ql,ql))+exp(-1.35*dot(qr,qr));
+     float fx=j==0?-12.:j==1?-5.:j==2?5.:12.;
+     vec2 qt=(vLocal.xz-vec2(fx,uParcelRoad>1.5?-2.46:-3.88))/vec2(2.12,1.25);
+     beam+=exp(-1.35*dot(qt,qt));
+   }
+   float switched=smoothstep(.35,.72,uNight);
+   lit+=vec3(1.48,.99,.56)*min(beam,2.25)*switched*1.16;
  }
  if(rawMetal<.65){
   float pool=exp(-pow((vPosition.z-6.3)*.42,2.))*exp(-pow(vPosition.x*.073,2.))*max(n.y,0.)*exp(-vPosition.y*.16);
@@ -1182,13 +1204,13 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
   roundBox(0,-.4,0,37,.70,27,.85,pal.edge);
   box(0,-.02,0,36.4,.07,26.4,[.62,.67,.48,.94,0]);group('site');
   const rural=type==='chacaras',split=type==='desmembramento';
-  const dirt=[.58,.46,.34,.98,0],rut=[.49,.37,.27,.77,0],shoulder=[.70,.59,.43,.92,0];
+  const dirt=[.58,.46,.34,.98,.15625],paved=[.73,.74,.74,.95,.15625],rut=[.49,.37,.27,.77,0],shoulder=[.70,.59,.43,.92,0];
   // Circulações de chácaras: caminhos rurais de terra contínuos, com limites nítidos, sem sobreposição de lotes.
   if(rural){
    box(0,.098,11.15,36,.13,3.30,shoulder);
    box(0,.132,11.15,36,.14,3.00,dirt);
   }else{
-   box(0,.132,11.15,36,.14,3.00,pal.road);
+   box(0,.132,11.15,36,.14,3.00,paved);
   }
   if(!split){
    if(rural){
@@ -1202,9 +1224,9 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
     for(const z of [10.62,11.72])box(0,.209,z,35,.012,.13,rut);
    }else{
     box(0,.090,0,4.35,.12,24,[.69,.70,.68,.92,0]);
-    box(0,.105,0,3.80,.14,24,pal.road);
+    box(0,.105,0,3.80,.14,24,paved);
     box(0,.102,-2.4,34.6,.12,3.70,[.69,.70,.68,.92,0]);
-    box(0,.122,-2.4,34,.14,3.30,pal.road);
+    box(0,.122,-2.4,34,.14,3.30,paved);
    }
   }
   const cols=split?4:rural?2:4,rows=split?1:rural?2:3;
@@ -1220,9 +1242,9 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
   for(const x of [-16,16])for(const z of [-10,-5,0,5,9])tree(x,.17,z,.7);
   if(!split){
    // Luminárias proporcionais ao lote, com poste cilíndrico e braços apontados para a rua.
-   const steel=[.36,.40,.44,.89,.08],head=[.23,.27,.30,.94,.04],diffuser=[1.00,.90,.72,.27,1.3];
+   const steel=[.36,.40,.44,.89,.08],head=[.23,.27,.30,.94,.04],diffuser=[1.00,.90,.72,.20,2.35];
    function streetPole(x,z,axis){
-    const dx=axis==='z'?(x<0?.56:-.56):0,dz=axis==='x'?.56:0;
+    const dx=axis==='z'?(x<0?.56:-.56):0,dz=axis==='front'?-.66:axis==='x'?.56:0;
     roundBox(x,.23,z,.25,.20,.25,.045,steel);
     pipe([x,.27,z],[x,3.12,z],.054,steel);
     sphere(x,3.13,z,.068,.068,.068,steel);
@@ -1231,7 +1253,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
     box(x+dx,3.035,z+dz,axis==='z'?.22:.39,.018,axis==='z'?.39:.22,diffuser);
    }
    // Rua frontal, eixo longitudinal e travessa: iluminação em todo o sistema viário.
-   for(const x of [-13,-7,-3,5,12])streetPole(x,9.42,'x');
+   for(const x of [-13,-7,-3,5,12])streetPole(x,12.95,'front');
    const side=rural?1.97:2.12;
    for(const z of [-8.2,-4.8,3.1,7.0])streetPole(-side,z,'z');
    for(const z of [-7.0,-3.8,2.3,6.4])streetPole(side,z,'z');
@@ -1415,7 +1437,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  let fb=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,fb);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,shadowTex,0);gl.drawBuffers([gl.NONE]);gl.readBuffer(gl.NONE);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
  gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);
  const lightVP=M.mul(M.ortho(-39,39,-36,42,1,145),M.look([-39,74,43],[0,8,0],[0,1,0]));
- const U={};for(let [key,p,names] of [['main',prog,['uModel','uVP','uLight','uEye','uShadowMap','uNight','uBlueprint','uCut','uStudio','uInterior','uFloorPreview']],['depth',depth,['uModel','uVP']]]){U[key]={};names.forEach(n=>U[key][n]=gl.getUniformLocation(p,n));}
+ const U={};for(let [key,p,names] of [['main',prog,['uModel','uVP','uLight','uEye','uShadowMap','uNight','uBlueprint','uCut','uStudio','uInterior','uFloorPreview','uParcelRoad']],['depth',depth,['uModel','uVP']]]){U[key]={};names.forEach(n=>U[key][n]=gl.getUniformLocation(p,n));}
  function isVisible(g){
   if(g.name==='hero-traffic')return state.type==='residencial'&&state.heroCarActive>.5&&state.heroCarTravel<.78;
   if(state.layers[g.name]===false)return false;
@@ -1523,7 +1545,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  if(state.firstPerson){eye=[state.walkX,1.6,state.walkZ];let cos=Math.cos(state.lookPitch),dir=[Math.sin(state.walkYaw)*cos,Math.sin(state.lookPitch),-Math.cos(state.walkYaw)*cos];vp=M.mul(perspective(70*Math.PI/180,aspect,.05,160),M.look(eye,eye.map((x,i)=>x+dir[i]),[0,1,0]));}
  syncFloorNumberPosition(vp);
  const nextShadowKey=[geometryRevision,state.yaw,state.build,state.structure,state.crane,state.craneLift,state.explode,state.selectedFloor,state.floorSlide,state.onlyFloor,JSON.stringify(state.layers)].join('|');if(nextShadowKey!==shadowKey){gl.bindFramebuffer(gl.FRAMEBUFFER,fb);gl.viewport(0,0,2048,2048);gl.clear(gl.DEPTH_BUFFER_BIT);gl.useProgram(depth);gl.uniformMatrix4fv(U.depth.uVP,false,lightVP);groups.forEach(g=>{if(!g.cast||!isVisible(g))return;if(hiddenByGrowth(g))return;gl.uniformMatrix4fv(U.depth.uModel,false,obj(g));gl.bindVertexArray(g.vao);gl.drawArrays(gl.TRIANGLES,0,g.count);});shadowKey=nextShadowKey;shadowPasses++;}renderedFrames++;
- gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,w,h);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(prog);gl.uniformMatrix4fv(U.main.uVP,false,vp);gl.uniformMatrix4fv(U.main.uLight,false,lightVP);gl.uniform3fv(U.main.uEye,eye);gl.uniform1f(U.main.uNight,state.night);gl.uniform1f(U.main.uCut,state.cut);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shadowTex);gl.uniform1i(U.main.uShadowMap,0);
+ gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,w,h);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(prog);gl.uniformMatrix4fv(U.main.uVP,false,vp);gl.uniformMatrix4fv(U.main.uLight,false,lightVP);gl.uniform3fv(U.main.uEye,eye);gl.uniform1f(U.main.uNight,state.night);gl.uniform1f(U.main.uCut,state.cut);gl.uniform1f(U.main.uParcelRoad,state.type==='loteamento'?1:state.type==='chacaras'?2:0);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shadowTex);gl.uniform1i(U.main.uShadowMap,0);
  groups.forEach(g=>{if(!isVisible(g))return;if(hiddenByGrowth(g))return;gl.uniform1f(U.main.uNight,state.night);gl.uniform1f(U.main.uStudio,g.name==='studio'?1:0);gl.uniform1f(U.main.uInterior,state.type==='interior'?1:0);gl.uniform1f(U.main.uFloorPreview,g.name==='floor-detail'&&state.selectedFloor>=0?1:0);gl.uniformMatrix4fv(U.main.uModel,false,obj(g));gl.bindVertexArray(g.vao);gl.drawArrays(gl.TRIANGLES,0,g.count);});
  canvas.dataset.rendered='true';dirty=false;}
  let rafHandle=0,boostUntil=0;function scheduleFrame(){if(!stopped&&!xrActive&&!rafHandle)rafHandle=requestAnimationFrame(frame);}
@@ -1541,7 +1563,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
   try{const layer=new XRWebGLLayer(sess,gl,{alpha:true});sess.updateRenderState({baseLayer:layer,depthNear:.01,depthFar:200});let ref=await sess.requestReferenceSpace('local');xrActive=true;
    sess.addEventListener('end',()=>{xrActive=false;xrSession=null;dirty=true;scheduleFrame();});
    const ar=mode==='immersive-ar',sc=ar?.045:state.type==='interior'?1:.07,world=M.identity();world[0]=world[5]=world[10]=sc;world[13]=ar?-.3:-1.6;world[14]=state.type==='interior'&&!ar?0:-1.6;
-   const tick=(t,frame)=>{if(!xrActive)return;sess.requestAnimationFrame(tick);const pose=frame.getViewerPose(ref);if(!pose)return;gl.bindFramebuffer(gl.FRAMEBUFFER,layer.framebuffer);gl.clearColor(ar?0:.96,ar?0:.96,ar?0:.97,ar?0:1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(prog);gl.uniformMatrix4fv(U.main.uLight,false,lightVP);gl.uniform1f(U.main.uNight,state.night);gl.uniform1f(U.main.uCut,1000);gl.uniform1f(U.main.uFloorPreview,0);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shadowTex);gl.uniform1i(U.main.uShadowMap,0);
+   const tick=(t,frame)=>{if(!xrActive)return;sess.requestAnimationFrame(tick);const pose=frame.getViewerPose(ref);if(!pose)return;gl.bindFramebuffer(gl.FRAMEBUFFER,layer.framebuffer);gl.clearColor(ar?0:.96,ar?0:.96,ar?0:.97,ar?0:1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(prog);gl.uniformMatrix4fv(U.main.uLight,false,lightVP);gl.uniform1f(U.main.uNight,state.night);gl.uniform1f(U.main.uCut,1000);gl.uniform1f(U.main.uParcelRoad,state.type==='loteamento'?1:state.type==='chacaras'?2:0);gl.uniform1f(U.main.uFloorPreview,0);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shadowTex);gl.uniform1i(U.main.uShadowMap,0);
     for(const view of pose.views){const v=layer.getViewport(view);gl.viewport(v.x,v.y,v.width,v.height);gl.uniformMatrix4fv(U.main.uVP,false,M.mul(view.projectionMatrix,view.transform.inverse.matrix));const p=view.transform.position;gl.uniform3fv(U.main.uEye,[p.x,p.y,p.z]);for(const g of groups){if(!isVisible(g)||g.name==='studio')continue;gl.uniform1f(U.main.uFloorPreview,g.name==='floor-detail'&&state.selectedFloor>=0?1:0);gl.uniformMatrix4fv(U.main.uModel,false,M.mul(world,obj(g)));gl.bindVertexArray(g.vao);gl.drawArrays(gl.TRIANGLES,0,g.count);}}};sess.requestAnimationFrame(tick);return sess;
   }catch(e){await sess.end();xrActive=false;dirty=true;scheduleFrame();throw e;}
  }

@@ -25,6 +25,10 @@ jobs:
             'model floor shifts left': bool(re.search(r"if\(g\.name==='floor-detail'\)\{[^}]*mat\[12\]-=[0-9.]+\*d",s)),
             'site has architecture variants': all(x in s for x in ["if(type==='studios'){w=10.5", "if(type==='hotel'){w=19.2", "if(type==='comercial'){w=18.8", "if(type==='misto'){w=f===0?24"]),
             'dirt rural roads': "Circulações de chácaras: caminhos rurais" in s,
+            'rural streetlights switch with night': 'diffuser=[1.00,.90,.72,.20,2.35]' in s and 'float switched=smoothstep(.35,.72,uNight)' in s,
+            'roadway lighting enabled in both subdivisions': 'uParcelRoad,state.type===\x27loteamento\x27?1:state.type===\x27chacaras\x27?2:0' in s,
+            'desmembramento has no new light poles': 'if(!split){' in s and 'function streetPole(x,z,axis)' in s,
+
             'fullscreen controls separated': ".game-surface .game-exit{top:59px" in s,
             'PRAGMA BIM federated viewer': 'pragma-bim-iframe' in s and pathlib.Path('pragma-bim.html').exists() and pathlib.Path('pragma-bim.js').exists(),
             'favicons present': pathlib.Path('favicon.ico').exists() and pathlib.Path('favicon.png').exists(),
