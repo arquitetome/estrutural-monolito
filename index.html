@@ -1018,19 +1018,21 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
 
  // Luminárias de passeio: postes proporcionais, braços sobre o leito da rua
  // e difusores emissivos; sem deslocar árvores, edifício ou via.
- function heroStreetLighting(){
+ function heroStreetLighting(type='residencial'){
+   const ruralSite=['loteamento','chacaras','desmembramento'].includes(type);
+   const poleZ=ruralSite?9.48:8.30,luminaireZ=poleZ+.80;
    const steel=[.25,.29,.31,.56,.22],
          arm=[.39,.42,.43,.47,.17],
          warmLens=[1.00,.87,.60,.20,2.35];
    // Poste da extremidade esquerda removido do modelo inteiro.
    for(const x of [-7,0,7,14]){
      // Base na calçada (z=8.20), nunca no meio da pista.
-     box(x,.24,8.30,.37,.17,.37,steel);
-     box(x,1.57,8.30,.105,2.82,.105,steel);
-     sphere(x,3.04,8.30,.105,.11,.105,arm);
-     pipe([x,3.01,8.30],[x,3.01,9.02],.055,arm);
-     roundBox(x,2.98,9.06,.40,.12,.50,.08,arm);
-     box(x,2.895,9.10,.28,.032,.38,warmLens);
+     box(x,.24,poleZ,.37,.17,.37,steel);
+     box(x,1.57,poleZ,.105,2.82,.105,steel);
+     sphere(x,3.04,poleZ,.105,.11,.105,arm);
+     pipe([x,3.01,poleZ],[x,3.01,luminaireZ-.04],.055,arm);
+     roundBox(x,2.98,luminaireZ,.40,.12,.50,.08,arm);
+     box(x,2.895,luminaireZ+.04,.28,.032,.38,warmLens);
    }
    group('hero-street-lamps',0,true);
  }
@@ -1178,6 +1180,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  function subdivision(type){
   box(0,-.77,0,200,.1,200,[.955,.957,.962,1,0]);group('studio',0,false);
   roundBox(0,-.4,0,37,.70,27,.85,pal.edge);box(0,-.02,0,36.4,.07,26.4,[.62,.67,.48,.94,0]);group('site');
+  heroStreetLighting(type);
   const rural=type==='chacaras',split=type==='desmembramento';
   const dirt=[.58,.44,.29,.98,0],rut=[.70,.55,.38,.94,0],darkSoil=[.48,.35,.24,.94,0];
   // Circulações de chácaras: caminhos rurais em terra, com trilhas de pneus.
@@ -1242,7 +1245,7 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  // Lot contour: a fine anodised edge on the plinth.
  for(let z of [-11,7.9])box(1,.4,z,24.4,.045,.055,pal.bronze);for(let x of [-11.2,13.2])box(x,.4,-1.55,.055,.045,19,pal.bronze);
  group('context');
- if(type==='residencial'){heroStreetLighting();heroCarGeometry();}
+ heroStreetLighting(type);if(type==='residencial')heroCarGeometry();
  if(['casas','logistico','multi'].includes(type)){campus(type);return;}
  let count=(configs[type]||configs.residencial).floors;
  const skins={
@@ -2449,7 +2452,7 @@ const services=[
  {short:'Vendas',name:'Do interesse à decisão.',tag:'07 · Vendas e estoque',desc:'Organize o atendimento e a disponibilidade das unidades ao longo da comercialização.',items:['Funil de atendimento','Disponibilidade de unidades','Indicadores comerciais'],icon:['people','plan','chart']}
 ];
 function home(){return `<section class="chapter chapter-home" aria-labelledby="home-title"><div class="home-heading"><h1 id="home-title">Seu terreno.<br> <span>Uma nova perspectiva.</span></h1><p>Veja o que construir, quanto pode custar e por onde começar.</p><div class="actions"><button class="button" data-land="hub">Analisar meu terreno</button><button class="text-button" data-chapter="3">Ver a entrega <span aria-hidden="true">›</span></button></div><div class="free">Uma ideia começa aqui, estudo preliminar sem compromisso.</div></div><span class="demo-label"></span></section>`;}
-function possibility(){return `<section class="chapter split-chapter enhanced-possibility" aria-labelledby="possibility-title"><div class="copy"><div class="eyebrow">01. Enxergue as possibilidades.</div><h2 id="possibility-title">Um terreno.<br> Vários caminhos.</h2><p>Explore o empreendimento.<br> Depois, veja cada andar.</p><div class="possibility-options typology-picker interactive"><label class="sr-only" for="typology-select">Escolha o tipo de empreendimento</label><div class="typology-select-shell"><select id="typology-select" name="typology" aria-label="Selecionar tipo de empreendimento">${Object.entries(variants).map(([k,v])=>`<option value="${k}" ${state.variant===k?'selected':''}>${v.label}</option>`).join('')}</select><span class="typology-select-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></div>${Object.entries(variants).map(([k,v])=>`<button type="button" class="possibility-option" data-variant="${k}" aria-pressed="${state.variant===k}"><span class="radio" aria-hidden="true"></span><span><strong>${v.label}</strong><small>${v.desc}</small></span></button>`).join('')}</div><p class="fine">Modelos conceituais. Usos e dimensões dependem de análise técnica.${state.completed?' <strong>Seus dados já acompanham esta sessão.</strong>':''}</p><button class="legal-link" data-land="legal-report">${ICLand.status().label} ↗</button><button class="text-button" style="font-size:11px;padding:0;min-height:25px" data-land="envelope">Explorar envelope informado ↗</button></div><div class="floor-number-overlay" aria-label="Seleção de pavimentos" ${state.explode?'':'hidden'}>${Array.from({length:architecture?.state.floorCount||({casa:2,casas:2,logistico:1,hotel:7,studios:10,misto:6,comercial:6,multi:6}[state.variant]||8)},(_,i)=>`<button type="button" data-floor-number="${i}" aria-label="Abrir ${i===0?'térreo':i+'º pavimento'} à esquerda" aria-pressed="${state.selectedFloor===i}" title="${i===0?'Térreo':i+'º pavimento'}">${String(i+1).padStart(2,'0')}</button>`).join('')}</div><div class="model-controls interactive"><button class="soft-button" data-action="explode" ${['loteamento','chacaras','desmembramento'].includes(state.variant)?'hidden':''} aria-pressed="${state.explode}">${ico('layers')}<span>${state.explode?'Reunir pavimentos':'Separar pavimentos'}</span></button><button class="soft-button" data-action="night" aria-pressed="${state.night}">${ico('sun')}<span>${state.night?'Apagar luzes':'Acender luzes'}</span></button></div></section>`;}
+function possibility(){return `<section class="chapter split-chapter enhanced-possibility" aria-labelledby="possibility-title"><div class="copy"><div class="eyebrow">01. Enxergue as possibilidades.</div><h2 id="possibility-title">Um terreno.<br> Vários caminhos.</h2><p>Explore o empreendimento.<br> Depois, veja cada andar.</p><div class="possibility-options typology-picker interactive"><label class="sr-only" for="typology-select">Escolha o tipo de empreendimento</label><div class="typology-select-shell"><select id="typology-select" name="typology" aria-label="Selecionar tipo de empreendimento">${Object.entries(variants).map(([k,v])=>`<option value="${k}" ${state.variant===k?'selected':''}>${v.label}</option>`).join('')}</select><span class="typology-select-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></div>${Object.entries(variants).map(([k,v])=>`<button type="button" class="possibility-option" data-variant="${k}" aria-pressed="${state.variant===k}"><span class="radio" aria-hidden="true"></span><span><strong>${v.label}</strong><small>${v.desc}</small></span></button>`).join('')}</div><p class="fine">Modelos conceituais. Usos e dimensões dependem de análise técnica.${state.completed?' <strong>Seus dados já acompanham esta sessão.</strong>':''}</p><div class="possibility-reference-row interactive"><button class="legal-link" data-land="legal-report">${ICLand.status().label} ↗</button><button class="text-button" style="font-size:11px;padding:0;min-height:25px" data-land="envelope">Explorar envelope informado ↗</button></div></div><div class="floor-number-overlay" aria-label="Seleção de pavimentos" ${state.explode?'':'hidden'}>${Array.from({length:architecture?.state.floorCount||({casa:2,casas:2,logistico:1,hotel:7,studios:10,misto:6,comercial:6,multi:6}[state.variant]||8)},(_,i)=>`<button type="button" data-floor-number="${i}" aria-label="Abrir ${i===0?'térreo':i+'º pavimento'} à esquerda" aria-pressed="${state.selectedFloor===i}" title="${i===0?'Térreo':i+'º pavimento'}">${String(i+1).padStart(2,'0')}</button>`).join('')}</div><div class="model-controls interactive"><button class="soft-button" data-action="explode" ${['loteamento','chacaras','desmembramento'].includes(state.variant)?'hidden':''} aria-pressed="${state.explode}">${ico('layers')}<span>${state.explode?'Reunir pavimentos':'Separar pavimentos'}</span></button><button class="soft-button" data-action="night" aria-pressed="${state.night}">${ico('sun')}<span>${state.night?'Apagar luzes':'Acender luzes'}</span></button></div></section>`;}
 function finance(){const html=`<section class="chapter chapter-finance" aria-labelledby="finance-title"><div class="copy"><div class="eyebrow">02. Coloque as premissas à prova.</div><h2 id="finance-title">Entenda a conta.<br> <span style="color:#86868b">Antes de investir.</span></h2><p>${state.simulation.active?'Os dados informados no início. Agora, em perspectiva.':'Uma conta de exemplo. Comece o cadastro para simular com seus dados.'}</p><div class="scenario-recap"><div><span>Área construída</span><strong>${dec(state.simulation.builtArea,0)} m²</strong></div><div><span>Área vendável / privativa</span><strong>${dec(state.simulation.sellableArea,0)} m²</strong></div><div><span>Venda / m²</span><strong id="price-output">${money(state.price)}</strong></div><div><span>Construção / m²</span><strong id="cost-output">${money(state.cost)}</strong></div></div><p class="fine">Premissas fictícias: 1.800 m² de área vendável, 2.400 m² de construção, R$ 1.800.000,00 de terreno e R$ 1.400.000,00 de outras despesas.</p><button class="text-button" data-action="assumptions" style="font-size:12px;margin-top:8px">Entender as premissas <span aria-hidden="true">+</span></button></div><div class="finance-panel"><div class="finance-top"><span>Cenário residencial</span><span class="demo-badge">Exemplo, não avaliação</span></div><div class="big-number" id="revenue">R$ 14.760.000,00</div><div class="number-label">Receita potencial de vendas</div><div class="finance-chart"><div class="chart-row"><span>Terreno</span><div class="bar-track"><span id="bar-land"></span></div><strong>R$ 1.800.000,00</strong></div><div class="chart-row"><span>Construção</span><div class="bar-track"><span id="bar-build"></span></div><strong id="build-value"></strong></div><div class="chart-row"><span>Outras despesas</span><div class="bar-track"><span id="bar-other"></span></div><strong>R$ 1.400.000,00</strong></div><div class="chart-row accent"><span>Custo total</span><div class="bar-track"><span id="bar-total"></span></div><strong id="total-value"></strong></div></div><div class="finance-result" aria-live="polite"><div><span>Saldo ilustrativo</span><strong id="balance"></strong></div><div class="percentage" id="margin"></div></div><p class="fine" id="finance-disclaimer">Antes de tributos sobre a receita, financiamento e efeitos do prazo. Não é lucro líquido, promessa de retorno ou viabilidade aprovada.</p></div></section>`;return ICExtras.financeView(html);}
 function delivery(){return `<section class="chapter chapter-delivery refined-delivery" aria-labelledby="delivery-title"><div class="copy"><div class="eyebrow">03. Clareza para decidir. Experiências para apresentar.</div><h2 id="delivery-title">Sua próxima decisão.<br> <span style="color:#86868b">Em um estudo.</span></h2><p>Entenda o terreno. Veja os números. Experimente como o empreendimento pode ser apresentado.</p><div class="delivery-features"><span>${ico('plan')} Ocupação e entorno</span><span>${ico('chart')} Cenário econômico</span><span>${ico('layers')} Mídias imersivas</span></div><div class="actions"><button class="button" data-action="open-report">Abrir o estudo <span aria-hidden="true">↗</span></button><button class="text-button" data-action="start">Analisar meu terreno ›</button></div><p class="fine mobile-optional-disclaimer">Amostra demonstrativa. O estudo preliminar é a porta de entrada; projetos e produção de mídias são escopos separados. Não há análise automática do terreno.</p></div><div class="delivery-browser"><div class="delivery-browser-top"><span>Explore a entrega</span><span class="demo-badge">Demonstração</span></div><nav class="delivery-nav" aria-label="Prévia das entregas">${[['estudo','Estudo'],['0','Imagens'],['7','Plantas'],['1','Vídeo'],['2','3D + RA'],['6','Gamificação']].map(([k,l])=>`<button type="button" data-delivery="${k}" aria-pressed="${state.deliveryMode===k}">${l}</button>`).join('')}</nav><div id="delivery-display"></div></div></section>`;}
 function renderDelivery(){ICExtras.cleanup();const d=$('#delivery-display');if(!d)return;
@@ -3952,5 +3955,41 @@ window.IC_PATOS_MARKET=[{"id":"JUCA-TE0584","kind":"market","category":"land","t
    right:8px;
  }
 }
+</style>
+<style id="ic-possibilities-header-lamps-all-models">
+
+/* Ajustes localizados: header legível e duas ações lado a lado. */
+#main[data-chapter="1"] .enhanced-possibility .copy {
+  align-self:flex-start!important;
+  margin-top:clamp(12px,2.1vh,23px);
+  max-height:calc(100% - 25px);
+  min-width:0;
+}
+#main[data-chapter="1"] .enhanced-possibility {
+  padding-top:clamp(45px,6vh,72px)!important;
+}
+#main[data-chapter="1"] .enhanced-possibility .copy .eyebrow {
+  display:block!important;
+  position:relative;
+  z-index:5;
+}
+#main[data-chapter="1"] .possibility-reference-row {
+  display:flex;flex-direction:row;align-items:center;justify-content:flex-start;
+  column-gap:clamp(10px,1.2vw,19px);row-gap:5px;flex-wrap:wrap;
+  max-width:100%;margin-top:4px;
+}
+#main[data-chapter="1"] .possibility-reference-row .legal-link,
+#main[data-chapter="1"] .possibility-reference-row .text-button {
+  display:inline-flex;align-items:center;flex:0 1 auto;min-width:0;margin:0!important;
+  font-size:11px!important;line-height:1.35;white-space:normal;text-align:left
+}
+@media(max-width:800px) {
+  #main[data-chapter="1"] .enhanced-possibility {padding-top:clamp(43px,6vh,62px)!important;}
+  #main[data-chapter="1"] .enhanced-possibility .copy {margin-top:4px;max-height:none;}
+  #main[data-chapter="1"] .possibility-reference-row{gap:7px;justify-content:flex-start;}
+  #main[data-chapter="1"] .possibility-reference-row .legal-link,
+  #main[data-chapter="1"] .possibility-reference-row .text-button{font-size:10px!important;}
+}
+
 </style>
 </body></html>
