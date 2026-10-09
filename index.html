@@ -1550,7 +1550,18 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  canvas.dataset.rendered='true';dirty=false;}
  let rafHandle=0,boostUntil=0;function scheduleFrame(){if(!stopped&&!xrActive&&!rafHandle)rafHandle=requestAnimationFrame(frame);}
  function frame(t){rafHandle=0;if(stopped||xrActive)return;if(anim){let p=Math.min(1,(t-anim.start)/anim.duration),e=1-Math.pow(1-p,4);Object.keys(anim.to).forEach(k=>{if(typeof anim.to[k]==='number')state[k]=anim.from[k]+(anim.to[k]-anim.from[k])*(k==='heroCarTravel'?p:e)});dirty=true;if(p===1)anim=null;}const boosted=t<boostUntil;if(dirty||boosted){render();lastT=t;}if(anim||dirty||boosted)scheduleFrame();}
- function animate(to,duration=1100){if(matchMedia('(prefers-reduced-motion:reduce)').matches)duration=0;const now=performance.now();anim={from:{...state},to,start:now,duration:Math.max(1,duration)};boostUntil=Math.max(boostUntil,now+Math.max(1,duration)+100);dirty=true;scheduleFrame();}
+ function animate(to,duration=1100){
+ // Ao encadear build, estrutura, grua e luz, concluir as metas anteriores
+ // mesmo quando a GPU não entregou quadros a tempo.
+ if(anim){for(const [key,value] of Object.entries(anim.to)){
+   if(!(key in to)&&typeof value==='number')state[key]=value;
+ }}
+ if(matchMedia('(prefers-reduced-motion:reduce)').matches)duration=0;
+ const now=performance.now();
+ anim={from:{...state},to,start:now,duration:Math.max(1,duration)};
+ boostUntil=Math.max(boostUntil,now+Math.max(1,duration)+100);
+ dirty=true;scheduleFrame();
+}
  let drag=null,dragPointer=null;canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;dragPointer=e.pointerId;drag={x:e.clientX,y:e.clientY,yaw:state.yaw,pitch:state.pitch,walkYaw:state.walkYaw,lookPitch:state.lookPitch};canvas.dispatchEvent(new CustomEvent('model-interaction'));canvas.setPointerCapture(e.pointerId);anim=null;if(state.build<.999||state.structure<.999){Object.assign(state,{build:1,structure:1,crane:0,craneLift:1});dirty=true;scheduleFrame();}canvas.classList.add('dragging');});canvas.addEventListener('pointermove',e=>{if(!drag)return;if(state.firstPerson){state.walkYaw=drag.walkYaw-(e.clientX-drag.x)*.006;state.lookPitch=Math.max(-1.1,Math.min(1.1,drag.lookPitch+(e.clientY-drag.y)*.004));dirty=true;scheduleFrame();return;}state.yaw=drag.yaw+(e.clientX-drag.x)*.009;state.pitch=Math.max(.22,Math.min(.96,drag.pitch+(e.clientY-drag.y)*.003));dirty=true;scheduleFrame();});function end(){drag=null;const pointer=dragPointer;dragPointer=null;if(pointer!==null&&canvas.hasPointerCapture(pointer))canvas.releasePointerCapture(pointer);canvas.classList.remove('dragging');}canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);canvas.addEventListener('lostpointercapture',end);
  const obs=new ResizeObserver(()=>{dirty=true;scheduleFrame();});obs.observe(canvas);canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(stopped)return;stopped=true;onFailure?.();});
 
@@ -1878,7 +1889,7 @@ function runHeroCycle(){const arch=ctx?.architecture();if(ctx?.state.chapter!==0
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.animate({build:1},3150);},4550));
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.animate({crane:0},700);},7550));
  // Acender somente após a grua sair; não interromper a animação da grua.
- introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;arch.animate({night:1},480);},8270));
+ introTimers.push(setTimeout(()=>{if(ctx.state.chapter!==0||heroTouched||$('dialog[open]'))return;Object.assign(arch.state,{build:1,structure:1,crane:0,craneLift:1});arch.redraw();arch.animate({night:1},480);},8270));
  // Gesto demonstrativo acontece após as luzes acenderem, sem mudar o ciclo total.
  introTimers.push(setTimeout(()=>{if(ctx.state.chapter===0&&!heroTouched&&!$('dialog[open]'))runGestureRotation(0);},8900));
  // Ao terminar o movimento, a cena fica clara e permanece assim até reiniciar o loop.
