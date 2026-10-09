@@ -29,7 +29,7 @@ const MODEL_URLS={
  telecom:{name:'Telecom',url:'https://static.wixstatic.com/3d/a8bcb7_86907ff118e1427cba0372af6509296e.glb',fallback:'https://static.wixstatic.com/3d/a8bcb7_52a770c30526450fafdd7e6a59373c62.glb'}
 };
 const rows=defs.map(d=>'<div class="layer-row" style="--layer:'+d[2]+'" data-row="'+d[0]+'"><label><input type="checkbox" data-layer="'+d[0]+'"'+(d[0]==='arch'?'':' checked')+'><i></i></label><button class="layer-name" data-layer-name="'+d[0]+'" aria-pressed="false">'+d[1]+'</button></div>').join('');
-ar.innerHTML='<div class="pbimLab"><div class="pbimCanvasWrap"><canvas class="pbimCanvas" id="bimCanvas"></canvas><div class="pbimOrigin">Coordenação BIM</div><div class="pbimWalkHint">Clique no 3D para ativar SETAS / WASD · Q/E para altura</div><button type="button" class="pbimFsBtn" id="pbimFsBtn" aria-label="Tela cheia" title="Tela cheia"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg></button><div class="pbimLoad" id="bimLoad" role="status" aria-live="polite"><div class="pragmaV27LoaderCard"><span class="pragmaV27LoaderIcon" aria-hidden="true"></span><strong id="bimLoadText">Preparando visualização 3D</strong><p class="pragmaV27LoaderCaption">Organizando as disciplinas</p><div class="pbimProgress"><i id="bimProgressBar"></i></div><small class="pragmaV27LoaderPercent" id="bimProgressNumber">0%</small></div></div><div class="pbimView"><button type="button" data-view="general" class="is-active" aria-pressed="true">Vista geral</button><button type="button" data-view="front" aria-pressed="false">Frontal</button><button type="button" data-view="top" aria-pressed="false">Superior</button></div></div><aside class="pbimLayers"><h3>Disciplinas</h3><div class="fine">Clique no nome ou no seletor para mostrar e ocultar a disciplina.</div><div id="layerRows">'+rows+'</div><div class="pbimExplain"><strong id="explainTitle">Disciplinas técnicas</strong><p id="explainText">Os demais projetos são exibidos primeiro. Ative o Arquitetônico apenas quando desejar.</p></div><div class="pbimCut"><span>Corte horizontal</span><input id="cutRange" type="range" min="0" max="100" value="0"><small><span id="cutValue">0%</span> · corte de cima para baixo.</small></div></aside></div>';
+ar.innerHTML='<div class="pbimLab"><div class="pbimCanvasWrap"><canvas class="pbimCanvas" id="bimCanvas"></canvas><div class="pbimOrigin">Coordenação BIM</div><button type="button" class="pbimFsBtn" id="pbimFsBtn" aria-label="Tela cheia" title="Tela cheia"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg></button><div class="pbimLoad" id="bimLoad" role="status" aria-live="polite"><div class="pragmaV27LoaderCard"><span class="pragmaV27LoaderIcon" aria-hidden="true"></span><strong id="bimLoadText">Preparando visualização 3D</strong><p class="pragmaV27LoaderCaption">Organizando as disciplinas</p><div class="pbimProgress"><i id="bimProgressBar"></i></div><small class="pragmaV27LoaderPercent" id="bimProgressNumber">0%</small></div></div><div class="pbimView"><button type="button" data-view="general" class="is-active" aria-pressed="true">Vista geral</button><button type="button" data-view="front" aria-pressed="false">Frontal</button><button type="button" data-view="top" aria-pressed="false">Superior</button></div></div><aside class="pbimLayers"><h3>Disciplinas</h3><div class="fine">Clique no nome ou no seletor para mostrar e ocultar a disciplina.</div><div id="layerRows">'+rows+'</div><div class="pbimExplain"><strong id="explainTitle">Disciplinas técnicas</strong><p id="explainText">Os demais projetos são exibidos primeiro. Ative o Arquitetônico apenas quando desejar.</p></div><div class="pbimCut"><span>Corte horizontal</span><input id="cutRange" type="range" min="0" max="100" value="0"><small><span id="cutValue">0%</span> · corte de cima para baixo.</small></div></aside></div>';
 
 const pragmaArchCheckbox=ar.querySelector('[data-layer="arch"]');
 if(pragmaArchCheckbox)pragmaArchCheckbox.checked=false;
@@ -72,9 +72,9 @@ function setupScene(){
  renderer.setClearColor(0x232830,1);renderer.localClippingEnabled=true;
  scene=new THREE.Scene();root=new THREE.Group();root.position.set(0,0,0);root.rotation.set(0,0,0);root.scale.set(1,1,1);scene.add(root);
  camera=new THREE.PerspectiveCamera(38,1,.01,100000);scene.add(camera);
- scene.add(new THREE.HemisphereLight(0xffffff,0x6a6270,2));
+ scene.add(new THREE.HemisphereLight(0xffffff,0x627386,2));
  const sun=new THREE.DirectionalLight(0xffffff,2.6);sun.position.set(5,8,6);scene.add(sun);
- controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.dampingFactor=.075;controls.rotateSpeed=.82;controls.zoomSpeed=.9;controls.panSpeed=.88;
+ controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.dampingFactor=.095;controls.rotateSpeed=.65;controls.zoomSpeed=.85;controls.enablePan=false;controls.screenSpacePanning=false;controls.minPolarAngle=.08;controls.maxPolarAngle=Math.PI-.08;
  plane=new THREE.Plane(new THREE.Vector3(0,-1,0),1e9);renderer.clippingPlanes=[plane];
  dracoLoader=new DRACOLoader();
  dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/libs/draco/');
@@ -211,6 +211,19 @@ function initBimWalkControls(){
 
  canvas.addEventListener('pointerdown',()=>{
    controls.enableZoom=true;
+   const building=models.arch||models.struct;
+   if(building&&controls&&!building.userData?.emptyForFocus){
+     const box=new THREE.Box3().setFromObject(building);
+     if(!box.isEmpty()){
+       const center=box.getCenter(new THREE.Vector3());
+       const distance=controls.target.distanceTo(center);
+       if(distance>1e-3){
+         // Mantém a posição da câmera; o giro seguinte passa a orbitar novamente o centro real do prédio.
+         controls.target.copy(center);
+         controls.update();
+       }
+     }
+   }
    try{canvas.focus({preventScroll:true})}catch(_){canvas.focus()}
  });
 
@@ -297,14 +310,22 @@ function updateCut(){
  cutValue.textContent=Math.round(t*100)+'%';
 }
 function fit(view='general',initialZoom=1){
- const b=visibleBox();if(!b||b.isEmpty())return;
+ // Pivô estável no CENTRO DO EDIFÍCIO, inclusive com Arquitetônico oculto.
+ // A lista de disciplinas visíveis não altera o foco ao girar ou alternar camadas.
+ const reference=models.arch||models.struct||models.hydro||Object.values(models).find(g=>g?.visible);
+ let b=reference?new THREE.Box3().setFromObject(reference):visibleBox();
+ if(!b||b.isEmpty())b=visibleBox();
+ if(!b||b.isEmpty())return;
  const size=b.getSize(new THREE.Vector3()),center=b.getCenter(new THREE.Vector3());
  const r=Math.max(size.x,size.y,size.z,1),d=r*1.55/Math.max(1,initialZoom);
+ controls.enablePan=false;
  controls.target.copy(center);
  if(view==='front')camera.position.set(center.x,center.y+r*.12,center.z+d);
  else if(view==='top')camera.position.set(center.x,center.y+d,center.z+.001);
  else camera.position.set(center.x+d*.8,center.y+d*.55,center.z+d*.8);
- camera.near=Math.max(.01,d/1000);camera.far=d*30;camera.updateProjectionMatrix();controls.update();updateCut();
+ camera.near=Math.max(.01,d/1000);camera.far=d*30;camera.updateProjectionMatrix();
+ controls.update();updateCut();
+ window.INCORP_BIM_FOCUS={pivot:[center.x,center.y,center.z],reference:reference===models.arch?'arquitetonico':reference===models.struct?'estrutural':'disciplina',view};
 }
 
 
@@ -702,7 +723,7 @@ function pragmaInstallSpdaControls(){
     number.type='number';
     number.id='pragmaSpdaDegrees'+axis.toUpperCase();
     number.min='-180';number.max='180';number.step='1';number.value=String(pragmaSpdaAngles[axis]);
-    number.style.cssText='width:70px;flex:0 0 70px;padding:6px 5px;border:1px solid #d8cadd;border-radius:7px;background:#fff;color:#442954';
+    number.style.cssText='width:70px;flex:0 0 70px;padding:6px 5px;border:1px solid #d8cadd;border-radius:7px;background:#fff;color:#2b3a4b';
     number.setAttribute('aria-label','Rotação SPDA '+axis.toUpperCase()+' em graus');
     range.addEventListener('input',e=>pragmaSetSpdaRotation(axis,e.target.value));
     number.addEventListener('change',e=>pragmaSetSpdaRotation(axis,e.target.value));
@@ -714,7 +735,7 @@ function pragmaInstallSpdaControls(){
       const btn=document.createElement('button');
       btn.type='button';
       btn.textContent=delta<0?'−90°':'+90°';
-      btn.style.cssText='flex:1;border:1px solid #d8cadd;border-radius:7px;background:#faf7fb;color:#653878;padding:5px 6px;cursor:pointer;font-size:11px';
+      btn.style.cssText='flex:1;border:1px solid #d8cadd;border-radius:7px;background:#faf7fb;color:#657d96;padding:5px 6px;cursor:pointer;font-size:11px';
       btn.addEventListener('click',()=>pragmaSetSpdaRotation(axis,pragmaSpdaAngles[axis]+delta));
       buttons.appendChild(btn);
     }
@@ -723,7 +744,7 @@ function pragmaInstallSpdaControls(){
   const reset=document.createElement('button');
   reset.type='button';
   reset.textContent='Restaurar rotação aprovada do SPDA';
-  reset.style.cssText='width:100%;padding:8px;border:1px solid #c9b3cf;border-radius:8px;background:#f8f3fa;color:#653878;cursor:pointer;font-weight:650;font-size:11px';
+  reset.style.cssText='width:100%;padding:8px;border:1px solid #b8cbe1;border-radius:8px;background:#f8f3fa;color:#657d96;cursor:pointer;font-weight:650;font-size:11px';
   reset.addEventListener('click',()=>{
     pragmaSetSpdaRotation('x',PRAGMA_SPDA_APPROVED_ROTATION.x);
     pragmaSetSpdaRotation('z',PRAGMA_SPDA_APPROVED_ROTATION.z);
@@ -816,13 +837,13 @@ function pragmaInstallSpdaPositionControls(){
   range.style.cssText='width:100%;min-width:0;flex:1;margin:0';
   const num=document.createElement('input');num.type='number';num.id='pragmaSpdaOffset'+axis.toUpperCase();
   num.min='-50';num.max='50';num.step='0.01';num.value='0.00';
-  num.style.cssText='width:75px;min-width:75px;padding:6px 5px;border:1px solid #d8cadd;border-radius:7px;background:#fff;color:#442954';
+  num.style.cssText='width:75px;min-width:75px;padding:6px 5px;border:1px solid #d8cadd;border-radius:7px;background:#fff;color:#2b3a4b';
   range.addEventListener('input',e=>pragmaTranslateSpda(axis,e.target.value));
   num.addEventListener('change',e=>pragmaTranslateSpda(axis,e.target.value));
   line.appendChild(range);line.appendChild(num);block.appendChild(line);panel.appendChild(block);
  }
  const reset=document.createElement('button');reset.type='button';reset.textContent='Restaurar deslocamento do SPDA';
- reset.style.cssText='width:100%;padding:8px;border:1px solid #c9b3cf;border-radius:8px;background:#f8f3fa;color:#653878;cursor:pointer;font-weight:650;font-size:11px';
+ reset.style.cssText='width:100%;padding:8px;border:1px solid #b8cbe1;border-radius:8px;background:#f8f3fa;color:#657d96;cursor:pointer;font-weight:650;font-size:11px';
  reset.addEventListener('click',()=>['x','y','z'].forEach(a=>pragmaTranslateSpda(a,0)));
  panel.appendChild(reset);aside.appendChild(panel);
 }
@@ -878,7 +899,7 @@ function pragmaInsertTools(){
     num.min=range.min;num.max=range.max;num.step='0.01';num.value=pragmaLinkedOffsets[def.axis].toFixed(2);
     num.title='Deslocamento em metros';
     num.setAttribute('aria-label',def.label+' em metros');
-    num.style.cssText='flex:0 0 75px;width:75px;min-width:75px;padding:6px 5px;border:1px solid #d8cadd;border-radius:7px;font:inherit;background:#fff;color:#442954';
+    num.style.cssText='flex:0 0 75px;width:75px;min-width:75px;padding:6px 5px;border:1px solid #d8cadd;border-radius:7px;font:inherit;background:#fff;color:#2b3a4b';
     range.addEventListener('input',ev=>pragmaMoveLinkedModels(def.axis,ev.target.value));
     num.addEventListener('change',ev=>pragmaMoveLinkedModels(def.axis,ev.target.value));
     controls.appendChild(range);controls.appendChild(num);
@@ -889,7 +910,7 @@ function pragmaInsertTools(){
   const reset=document.createElement('button');
   reset.type='button';
   reset.textContent='Restaurar posição travada';
-  reset.style.cssText='width:100%;padding:9px 8px;border:1px solid #c9b3cf;border-radius:8px;background:#f8f3fa;color:#653878;cursor:pointer;font-weight:650';
+  reset.style.cssText='width:100%;padding:9px 8px;border:1px solid #b8cbe1;border-radius:8px;background:#f8f3fa;color:#657d96;cursor:pointer;font-weight:650';
   reset.addEventListener('click',()=>{['x','y','z'].forEach(axis=>pragmaMoveLinkedModels(axis,PRAGMA_LOCKED_POSITION[axis]));});
   p.appendChild(reset);
 
@@ -899,7 +920,7 @@ function pragmaInsertTools(){
   p.appendChild(finishLabel);
   const select=document.createElement('select');
   select.id='pragmaStructMode';
-  select.style.cssText='width:100%;padding:9px;border-radius:8px;border:1px solid #d8cadd;background:#fff;color:#442954';
+  select.style.cssText='width:100%;padding:9px;border-radius:8px;border:1px solid #d8cadd;background:#fff;color:#2b3a4b';
   const solid=document.createElement('option');
   solid.value='solid';solid.textContent='Sólido';
   const transparent=document.createElement('option');
@@ -1013,7 +1034,7 @@ function pragmaV24BoldStructuralOutline(object,positions){
   object.add(heavy);
   object.userData.pragmaV24EmphasizedEdges=heavy;
   window.PRAGMA_STRUCTURAL_EDGES={
-   version:'V25',color:'#615969',opacity:.97,
+   version:'V25',color:'#657d96',opacity:.97,
    lineWidthCssPx:2.3,emphasizedSegments:written,enhanced:true,
    renderer:'batched-gpu-instancing'
   };
@@ -1541,7 +1562,7 @@ function pragmaV21OrbitExperience(){
  const canvas=document.getElementById('bimCanvas');
  if(!wrap||!canvas||!controls||wrap.querySelector('.pragmaOrbitGuide'))return;
  controls.autoRotate=true;
- controls.autoRotateSpeed=.36;
+ controls.autoRotateSpeed=.24;
  let manuallyPaused=false,idleTimer=null;
  const button=document.createElement('button');
  button.type='button';button.id='pragmaOrbitPause';
@@ -1573,7 +1594,7 @@ function pragmaV21OrbitExperience(){
  });
  canvas.addEventListener('pointerdown',()=>{
   canvas.style.cursor='grabbing';pauseTemporary();
-  wrap.querySelector('.pragmaOrbitGuide')?.classList.add('pragmaGuideDismiss');
+  // Nenhum aviso antigo é criado no canto do BIM.
  });
  window.addEventListener('pointerup',()=>{canvas.style.cursor='grab'});
  canvas.addEventListener('wheel',pauseTemporary,{passive:true});
@@ -1582,13 +1603,7 @@ function pragmaV21OrbitExperience(){
   if(manuallyPaused)controls.autoRotate=false;
   else if(!document.hidden&&!idleTimer)controls.autoRotate=true;
  });
- const guide=document.createElement('div');
- guide.className='pragmaOrbitGuide';
- guide.setAttribute('aria-hidden','true');
- const hand=document.createElement('span');hand.className='pragmaOrbitHand';hand.textContent='✋';
- const hint=document.createElement('span');hint.textContent='Arraste para girar · use a roda para aproximar';
- guide.appendChild(hand);guide.appendChild(hint);wrap.appendChild(guide);
- setTimeout(()=>guide.classList.add('pragmaGuideDismiss'),8000);
+ // O convite legado com emoji amarelo foi descontinuado; o gesto branco já usa SVG da capa.
  sync();
 }
 
@@ -1599,9 +1614,10 @@ async function startBim(){
  try{
   loadText.textContent='Preparando visualizador BIM…';
   await importThree();setupScene();initBimWalkControls();pragmaV21OrbitExperience();
-  const architectureReady=await loadModel('arch').catch(e=>{console.error('Visual V3 não pôde ser carregado; não usar substituto',e);return null;});
+  const architectureTask=loadModel('arch').catch(e=>{console.error('Visual V3 não pôde ser carregado; não usar substituto',e);return null;});
   const rest=defs.map(d=>d[0]).filter(k=>k!=='arch');
   await Promise.allSettled(rest.map(loadModel));
+  const architectureReady=await architectureTask;
   if(architectureReady)await autoCoordinateFinalSet();
   pragmaV21RemoveTopHydroPipe();
   if(models.hydro)pragmaSketchModel(models.hydro);
