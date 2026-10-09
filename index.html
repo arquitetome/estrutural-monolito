@@ -1613,7 +1613,8 @@ function docSymbol(){return '<svg viewBox="0 0 64 64" aria-hidden="true"><path d
 E.init=function(c){ctx=c;ctx.state.simulation={active:false,landArea:1200,builtArea:2400,sellableArea:1800,landValue:1800000,other:1400000};ensureTypes();setupIntro();};
 E.cleanup=function(){deactivateGame();if(sceneDispose){sceneDispose();sceneDispose=null;}if(model){model.dispose();model=null;}clearInterval(spinTimer);spinTimer=0;cancelAnimationFrame(gameFrame);gameKeys.clear();};
 E.projectsView=function(){return `<div class="work-title"><div><h2>Projetos, camada por camada.</h2><p>Do arquitetônico aos sistemas. Gire, isole e veja o corte.</p></div><span class="demo-badge">Modelo didático</span></div>
-<div class="bim-lab"><div class="bim-canvas-wrap"><canvas id="bim-canvas" tabindex="0" aria-label="Projetos 3D didáticos. Arraste para girar; use as camadas ao lado."></canvas><div class="bim-gesture-hint" id="bim-gesture-hint" aria-hidden="true"><img id="bim-swipe-hand" alt="" decoding="async"><span>Arraste para explorar</span></div><div class="model-origin">Demonstração didática · sem dimensionamento executivo</div><div class="bim-view-controls"><button data-ic="bim-reset">Reenquadrar</button><button data-ic="bim-top">Vista superior</button><button data-ic="bim-all">Mostrar tudo</button></div></div><aside class="bim-layer-panel"><div class="layer-heading"><h3>Disciplinas</h3><span class="fine">Mostrar · explicar · isolar</span></div>${layerDefs.map(([k,n,color])=>`<div class="layer-row" style="--layer:${color}"><label title="Mostrar ou ocultar ${n}"><input aria-label="Mostrar ${n}" data-ic-layer="${k}" type="checkbox" ${layers[k]?'checked':''}><i></i></label><button class="layer-name" data-ic-explain="${k}" aria-pressed="${activeLayer===k}">${n}</button><button class="isolate" data-ic-isolate="${k}" aria-label="Isolar ${n}">Isolar</button></div>`).join('')}<div class="layer-explanation" id="layer-explanation">${layerExplanation()}</div><label class="bim-cut">Corte horizontal <input type="range" id="bim-cut" min=".3" max="12" step=".1" value="${cut}" aria-label="Altura do corte didático"><span class="fine">Só visualização. Não verifica interferências.</span></label></aside></div>`;};
+<div class="bim-mobile-bar" role="group" aria-label="Controles de visualização de projetos"><button type="button" class="bim-mobile-panel-toggle" data-ic="bim-panel-toggle" aria-controls="bim-layer-panel" aria-expanded="false"><span>Disciplinas</span><span class="bim-mobile-panel-hint" aria-hidden="true">Selecionar camadas <span>›</span></span></button><label class="bim-mobile-cut"><span>Corte horizontal</span><input id="bim-cut-mobile" type="range" min=".3" max="12" step=".1" value="${cut}" aria-label="Altura do corte horizontal, versão celular"></label></div>
+<div class="bim-lab"><div class="bim-canvas-wrap"><canvas id="bim-canvas" tabindex="0" aria-label="Projetos 3D didáticos. Arraste para girar; use as camadas ao lado."></canvas><div class="bim-gesture-hint" id="bim-gesture-hint" aria-hidden="true"><img id="bim-swipe-hand" alt="" decoding="async"><span>Arraste para explorar</span></div><div class="model-origin">Demonstração didática · sem dimensionamento executivo</div><div class="bim-view-controls"><button data-ic="bim-reset">Reenquadrar</button><button data-ic="bim-top">Vista superior</button><button data-ic="bim-all">Mostrar tudo</button></div></div><aside class="bim-layer-panel" id="bim-layer-panel" aria-label="Disciplinas de projetos"><div class="layer-heading"><h3>Disciplinas</h3><span class="fine">Mostrar · explicar · isolar</span></div>${layerDefs.map(([k,n,color])=>`<div class="layer-row" style="--layer:${color}"><label title="Mostrar ou ocultar ${n}"><input aria-label="Mostrar ${n}" data-ic-layer="${k}" type="checkbox" ${layers[k]?'checked':''}><i></i></label><button class="layer-name" data-ic-explain="${k}" aria-pressed="${activeLayer===k}">${n}</button><button class="isolate" data-ic-isolate="${k}" aria-label="Isolar ${n}">Isolar</button></div>`).join('')}<div class="layer-explanation" id="layer-explanation">${layerExplanation()}</div><label class="bim-cut">Corte horizontal <input type="range" id="bim-cut" min=".3" max="12" step=".1" value="${cut}" aria-label="Altura do corte didático"><span class="fine">Só visualização. Não verifica interferências.</span></label></aside></div>`;};
 function layerExplanation(){const x=layerDefs.find(x=>x[0]===activeLayer);return `<strong>${x[3]}</strong><p>${x[4]}</p>`;}
 function mountBim(){
  const c=$('#bim-canvas');if(!c)return;
@@ -1853,7 +1854,18 @@ document.addEventListener('click',e=>{const el=e.target.closest('button,a');if(!
  if(el.dataset.icGallery!==undefined){e.preventDefault();showGalleryImage(Number(el.dataset.icGallery));return;}
  if(el.dataset.icImage){if(mediaURLs.image){URL.revokeObjectURL(mediaURLs.image);delete mediaURLs.image;}marketingVariant=el.dataset.icImage;rerender();return;}
  const act=el.dataset.ic;if(!act)return;
- switch(act){case'open-projects':openModule('projects');break;case'open-marketing':openModule('marketing');break;case'media-fullscreen':{const target=el.closest('.marketing-visual,.human-visual');if(!target)break;if(document.fullscreenElement){document.exitFullscreen?.();}else{target.requestFullscreen?.().catch(()=>{const s=$('#media-status');if(s)s.textContent='Tela cheia indisponível neste navegador.';});}break;}
+ switch(act){case'bim-panel-toggle':{
+  if(!matchMedia('(max-width:800px)').matches)break;
+  const lab=$('#work-content[data-module="projects"] .bim-lab');
+  if(!lab)break;
+  const open=lab.classList.toggle('bim-panel-open');
+  el.setAttribute('aria-expanded',String(open));
+  const hint=el.querySelector('.bim-mobile-panel-hint');
+  if(hint)hint.textContent=open?'Ocultar camadas ×':'Selecionar camadas ›';
+  requestAnimationFrame(()=>model?.redraw?.());
+  break;
+}
+ case'open-projects':openModule('projects');break;case'open-marketing':openModule('marketing');break;case'media-fullscreen':{const target=el.closest('.marketing-visual,.human-visual');if(!target)break;if(document.fullscreenElement){document.exitFullscreen?.();}else{target.requestFullscreen?.().catch(()=>{const s=$('#media-status');if(s)s.textContent='Tela cheia indisponível neste navegador.';});}break;}
  case'bim-all':for(const k of Object.keys(layers))layers[k]=true;cut=12;rerender();break;
  case'bim-reset':if(model){Object.assign(model.state,{yaw:-.33,pitch:.61,zoom:1});model.redraw();}break;
  case'bim-top':model?.animate({pitch:1.50,yaw:0},700);break;
@@ -1890,7 +1902,12 @@ document.addEventListener('change',async e=>{if(!ctx)return;const el=e.target;
   if(ctx.state.work==='marketing'||ctx.state.chapter===3)rerender();
  }
 });
-document.addEventListener('input',e=>{if(e.target.id==='bim-cut'){cut=+e.target.value;if(model){model.state.cut=cut;model.redraw();}}});
+document.addEventListener('input',e=>{if(e.target.id==='bim-cut'||e.target.id==='bim-cut-mobile'){
+ cut=+e.target.value;
+ const other=$('#'+(e.target.id==='bim-cut'?'bim-cut-mobile':'bim-cut'));
+ if(other)other.value=e.target.value;
+ if(model){model.state.cut=cut;model.redraw();}
+}});
 document.addEventListener('submit',e=>{if(e.target.id!=='simulation-form')return;e.preventDefault();const form=e.target,values=Object.fromEntries([...new FormData(form)].map(([k,v])=>[k,Number(v)]));if(Object.values(values).some(x=>!Number.isFinite(x)||x<0)||values.landArea<=0||values.builtArea<=0||values.sellableArea<=0||values.price<=0||values.cost<=0){$('#sim-error').textContent='Preencha valores válidos; áreas e preços precisam ser positivos.';return;}if(values.sellableArea>values.builtArea){$('#sim-error').textContent='A área vendável excede a construída. Confira as premissas.';return;}const{price,cost,...rest}=values;Object.assign(sim(),rest,{active:true});ctx.state.price=price;ctx.state.cost=cost;ctx.closeSheet();ctx.goChapter(2);});
 const mapping={ArrowUp:'forward',w:'forward',W:'forward',ArrowDown:'back',s:'back',S:'back',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right'};
 // The game never captures navigation merely because it is visible.
@@ -2434,7 +2451,7 @@ const services=[
 function home(){return `<section class="chapter chapter-home" aria-labelledby="home-title"><div class="home-heading"><h1 id="home-title">Seu terreno.<br> <span>Uma nova perspectiva.</span></h1><p>Veja o que construir, quanto pode custar e por onde começar.</p><div class="actions"><button class="button" data-land="hub">Analisar meu terreno</button><button class="text-button" data-chapter="3">Ver a entrega <span aria-hidden="true">›</span></button></div><div class="free">Uma ideia começa aqui, estudo preliminar sem compromisso.</div></div><span class="demo-label"></span></section>`;}
 function possibility(){return `<section class="chapter split-chapter enhanced-possibility" aria-labelledby="possibility-title"><div class="copy"><div class="eyebrow">01. Enxergue as possibilidades.</div><h2 id="possibility-title">Um terreno.<br> Vários caminhos.</h2><p>Explore o empreendimento.<br> Depois, veja cada andar.</p><div class="possibility-options typology-picker interactive"><label class="sr-only" for="typology-select">Escolha o tipo de empreendimento</label><div class="typology-select-shell"><select id="typology-select" name="typology" aria-label="Selecionar tipo de empreendimento">${Object.entries(variants).map(([k,v])=>`<option value="${k}" ${state.variant===k?'selected':''}>${v.label}</option>`).join('')}</select><span class="typology-select-chevron" aria-hidden="true">⌄</span></div></div><p class="fine">Modelos conceituais. Usos e dimensões dependem de análise técnica.${state.completed?' <strong>Seus dados já acompanham esta sessão.</strong>':''}</p><button class="legal-link" data-land="legal-report">${ICLand.status().label} ↗</button><button class="text-button" style="font-size:11px;padding:0;min-height:25px" data-land="envelope">Explorar envelope informado ↗</button></div><div class="floor-number-overlay" aria-label="Seleção de pavimentos" ${state.explode?'':'hidden'}>${Array.from({length:architecture?.state.floorCount||({casa:2,casas:2,logistico:1,hotel:7,studios:10,misto:6,comercial:6,multi:6}[state.variant]||8)},(_,i)=>`<button type="button" data-floor-number="${i}" aria-label="Abrir ${i===0?'térreo':i+'º pavimento'} à esquerda" aria-pressed="${state.selectedFloor===i}" title="${i===0?'Térreo':i+'º pavimento'}">${String(i+1).padStart(2,'0')}</button>`).join('')}</div><div class="model-controls interactive"><button class="soft-button" data-action="explode" ${['loteamento','chacaras','desmembramento'].includes(state.variant)?'hidden':''} aria-pressed="${state.explode}">${ico('layers')}<span>${state.explode?'Reunir pavimentos':'Separar pavimentos'}</span></button><button class="soft-button" data-action="night" aria-pressed="${state.night}">${ico('sun')}<span>${state.night?'Apagar luzes':'Acender luzes'}</span></button></div></section>`;}
 function finance(){const html=`<section class="chapter chapter-finance" aria-labelledby="finance-title"><div class="copy"><div class="eyebrow">02. Coloque as premissas à prova.</div><h2 id="finance-title">Entenda a conta.<br> <span style="color:#86868b">Antes de investir.</span></h2><p>${state.simulation.active?'Os dados informados no início. Agora, em perspectiva.':'Uma conta de exemplo. Comece o cadastro para simular com seus dados.'}</p><div class="scenario-recap"><div><span>Área construída</span><strong>${dec(state.simulation.builtArea,0)} m²</strong></div><div><span>Área vendável / privativa</span><strong>${dec(state.simulation.sellableArea,0)} m²</strong></div><div><span>Venda / m²</span><strong id="price-output">${money(state.price)}</strong></div><div><span>Construção / m²</span><strong id="cost-output">${money(state.cost)}</strong></div></div><p class="fine">Premissas fictícias: 1.800 m² de área vendável, 2.400 m² de construção, R$ 1.800.000,00 de terreno e R$ 1.400.000,00 de outras despesas.</p><button class="text-button" data-action="assumptions" style="font-size:12px;margin-top:8px">Entender as premissas <span aria-hidden="true">+</span></button></div><div class="finance-panel"><div class="finance-top"><span>Cenário residencial</span><span class="demo-badge">Exemplo, não avaliação</span></div><div class="big-number" id="revenue">R$ 14.760.000,00</div><div class="number-label">Receita potencial de vendas</div><div class="finance-chart"><div class="chart-row"><span>Terreno</span><div class="bar-track"><span id="bar-land"></span></div><strong>R$ 1.800.000,00</strong></div><div class="chart-row"><span>Construção</span><div class="bar-track"><span id="bar-build"></span></div><strong id="build-value"></strong></div><div class="chart-row"><span>Outras despesas</span><div class="bar-track"><span id="bar-other"></span></div><strong>R$ 1.400.000,00</strong></div><div class="chart-row accent"><span>Custo total</span><div class="bar-track"><span id="bar-total"></span></div><strong id="total-value"></strong></div></div><div class="finance-result" aria-live="polite"><div><span>Saldo ilustrativo</span><strong id="balance"></strong></div><div class="percentage" id="margin"></div></div><p class="fine" id="finance-disclaimer">Antes de tributos sobre a receita, financiamento e efeitos do prazo. Não é lucro líquido, promessa de retorno ou viabilidade aprovada.</p></div></section>`;return ICExtras.financeView(html);}
-function delivery(){return `<section class="chapter chapter-delivery refined-delivery" aria-labelledby="delivery-title"><div class="copy"><div class="eyebrow">03. Clareza para decidir. Experiências para apresentar.</div><h2 id="delivery-title">Sua próxima decisão.<br> <span style="color:#86868b">Em um estudo.</span></h2><p>Entenda o terreno. Veja os números. Experimente como o empreendimento pode ser apresentado.</p><div class="delivery-features"><span>${ico('plan')} Ocupação e entorno</span><span>${ico('chart')} Cenário econômico</span><span>${ico('layers')} Mídias imersivas</span></div><div class="actions"><button class="button" data-action="open-report">Abrir o estudo <span aria-hidden="true">↗</span></button><button class="text-button" data-action="start">Analisar meu terreno ›</button></div><p class="fine">Amostra demonstrativa. O estudo preliminar é a porta de entrada; projetos e produção de mídias são escopos separados. Não há análise automática do terreno.</p></div><div class="delivery-browser"><div class="delivery-browser-top"><span>Explore a entrega</span><span class="demo-badge">Demonstração</span></div><nav class="delivery-nav" aria-label="Prévia das entregas">${[['estudo','Estudo'],['0','Imagens'],['7','Plantas'],['1','Vídeo'],['2','3D + RA'],['6','Gamificação']].map(([k,l])=>`<button type="button" data-delivery="${k}" aria-pressed="${state.deliveryMode===k}">${l}</button>`).join('')}</nav><div id="delivery-display"></div></div></section>`;}
+function delivery(){return `<section class="chapter chapter-delivery refined-delivery" aria-labelledby="delivery-title"><div class="copy"><div class="eyebrow">03. Clareza para decidir. Experiências para apresentar.</div><h2 id="delivery-title">Sua próxima decisão.<br> <span style="color:#86868b">Em um estudo.</span></h2><p>Entenda o terreno. Veja os números. Experimente como o empreendimento pode ser apresentado.</p><div class="delivery-features"><span>${ico('plan')} Ocupação e entorno</span><span>${ico('chart')} Cenário econômico</span><span>${ico('layers')} Mídias imersivas</span></div><div class="actions"><button class="button" data-action="open-report">Abrir o estudo <span aria-hidden="true">↗</span></button><button class="text-button" data-action="start">Analisar meu terreno ›</button></div><p class="fine mobile-optional-disclaimer">Amostra demonstrativa. O estudo preliminar é a porta de entrada; projetos e produção de mídias são escopos separados. Não há análise automática do terreno.</p></div><div class="delivery-browser"><div class="delivery-browser-top"><span>Explore a entrega</span><span class="demo-badge">Demonstração</span></div><nav class="delivery-nav" aria-label="Prévia das entregas">${[['estudo','Estudo'],['0','Imagens'],['7','Plantas'],['1','Vídeo'],['2','3D + RA'],['6','Gamificação']].map(([k,l])=>`<button type="button" data-delivery="${k}" aria-pressed="${state.deliveryMode===k}">${l}</button>`).join('')}</nav><div id="delivery-display"></div></div></section>`;}
 function renderDelivery(){ICExtras.cleanup();const d=$('#delivery-display');if(!d)return;
  if(state.deliveryMode==='estudo'){d.innerHTML=`<div id="report-preview" class="report-section">${reportContent()}</div><div class="report-tabs" role="tablist" aria-label="Seções do estudo">${['Ocupação','Custos','Entorno'].map((t,i)=>`<button type="button" role="tab" aria-selected="${state.reportTab===i}" data-report="${i}">${t}</button>`).join('')}</div>`;}
  else{d.innerHTML=ICExtras.deliveryView(Number(state.deliveryMode));ICExtras.mountDelivery();}
@@ -3607,5 +3624,253 @@ window.IC_PATOS_MARKET=[{"id":"JUCA-TE0584","kind":"market","category":"land","t
 @media(max-width:800px) and (max-height:670px){
  #main[data-chapter="0"] .chapter-home .home-bottom-cta{bottom:13px!important}
 }
+</style>
+<style id="ic-20261008-mobile-only-refinement">
+
+/* INCORPCYCLE - EXCLUSIVO MOBILE: refinamento da home, etapas e Projetos. */
+.bim-mobile-bar{display:none}
+@media(max-width:800px){
+  /* Home: botões um pouco mais altos; Ver a entrega discretamente à direita. */
+  #main[data-chapter="0"] .chapter-home .home-bottom-cta{
+    bottom:36px!important
+  }
+  #main[data-chapter="0"] .chapter-home .home-bottom-cta .text-button[data-chapter="3"]{
+    transform:translateX(7px)!important
+  }
+
+  /* Mesmo padrão tipográfico dos indicadores e títulos das quatro etapas. */
+  #main[data-chapter="1"] .enhanced-possibility .eyebrow,
+  #main[data-chapter="2"] .chapter-finance .eyebrow,
+  #main[data-chapter="3"] .refined-delivery .copy .eyebrow,
+  #main[data-chapter="4"] .capability-heading .eyebrow{
+    font-size:clamp(10px,2.85vw,12px)!important;
+    font-weight:600!important;
+    line-height:1.38!important;
+    letter-spacing:.01em!important;
+    max-width:100%
+  }
+  #main[data-chapter="1"] .enhanced-possibility .copy h2,
+  #main[data-chapter="2"] .chapter-finance .copy h2,
+  #main[data-chapter="3"] .refined-delivery .copy h2,
+  #main[data-chapter="4"] .capability-heading h2{
+    font-size:clamp(27px,7.25vw,33px)!important;
+    line-height:1.08!important;
+    letter-spacing:-.045em!important
+  }
+  /* Remover somente o parágrafo informativo solicitado; manter Abrir o estudo. */
+  #main[data-chapter="3"] .refined-delivery .copy .mobile-optional-disclaimer{
+    display:none!important
+  }
+  #main[data-chapter="3"] .refined-delivery .copy .actions{
+    margin-top:8px!important
+  }
+
+  /* Navegação uniforme: Projetos e os demais módulos centrados. */
+  #main[data-chapter="4"] .capability-workspace .work-nav{
+    display:grid!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    align-items:stretch!important;
+    gap:4px!important;
+    width:100%;
+    min-width:0;
+    padding-bottom:6px!important;
+    overflow:visible
+  }
+  #main[data-chapter="4"] .capability-workspace .work-nav > button{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    text-align:center!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:42px!important;
+    padding:6px 2px!important;
+    font-size:clamp(9px,2.5vw,11px)!important;
+    font-weight:500;
+    line-height:1.18!important;
+    white-space:normal!important;
+    overflow-wrap:normal;
+    border-radius:11px!important;
+    flex:none!important;
+    margin:0!important
+  }
+  #main[data-chapter="4"] .capability-workspace .work-nav > button.active{
+    font-weight:600
+  }
+  #main[data-chapter="4"] .refined-cycle .capability-heading{
+    min-width:0;
+    align-items:flex-start
+  }
+  #main[data-chapter="4"] .refined-cycle .capability-heading > div{
+    min-width:0;
+    width:100%;
+    max-width:100%
+  }
+
+  /* Projetos: barra móvel compacta mantém o corte sempre acessível. */
+  .capability-workspace #work-content[data-module="projects"]{
+    overflow:hidden!important;
+    scrollbar-width:none!important;
+    min-height:0!important;
+    gap:7px!important;
+    padding-bottom:0!important
+  }
+  .capability-workspace #work-content[data-module="projects"] .work-title{
+    margin:0!important;
+    flex:0 0 auto
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-mobile-bar{
+    display:grid!important;
+    grid-template-columns:minmax(130px,.92fr) minmax(0,1fr);
+    gap:8px;
+    align-items:stretch;
+    flex:0 0 auto;
+    min-width:0;
+    height:43px
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-mobile-panel-toggle{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:center;
+    gap:1px;
+    min-width:0;
+    border:1px solid #dbe2ec;
+    background:#f6f9fd;
+    color:#232b36;
+    border-radius:12px;
+    padding:5px 11px;
+    text-align:left;
+    font-size:12px;
+    line-height:1.2;
+    font-weight:650;
+    cursor:pointer
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-mobile-panel-toggle[aria-expanded="true"]{
+    background:#eaf3ff;
+    border-color:#83b8f4;
+    color:#0457a8
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-mobile-panel-hint{
+    display:block;
+    font-size:9px;
+    line-height:1.25;
+    font-weight:500;
+    color:#5e7188
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-mobile-cut{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:2px;
+    min-width:0;
+    padding:5px 10px;
+    background:#fff;
+    border:1px solid #e1e5ec;
+    border-radius:12px;
+    font-size:10px;
+    font-weight:600;
+    color:#3f4751
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-mobile-cut input{
+    width:100%;
+    min-width:0;
+    height:16px;
+    padding:0;
+    margin:0;
+    accent-color:#0071e3
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-lab{
+    display:block!important;
+    position:relative!important;
+    flex:1 1 auto!important;
+    min-height:0!important;
+    overflow:hidden!important;
+    border-radius:15px
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-canvas-wrap{
+    display:block!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:0!important;
+    flex:none!important;
+    border-radius:15px
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-lab:not(.bim-panel-open) .bim-layer-panel{
+    display:none!important
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-lab.bim-panel-open .bim-layer-panel{
+    display:grid!important;
+    position:absolute!important;
+    z-index:22;
+    left:7px;
+    right:7px;
+    bottom:7px;
+    width:auto;
+    max-height:min(46dvh,340px);
+    overflow-y:auto!important;
+    overscroll-behavior:contain;
+    scrollbar-width:thin;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:4px 8px!important;
+    padding:11px!important;
+    background:rgba(255,255,255,.98);
+    border:1px solid #dfe5ef;
+    border-radius:14px;
+    box-shadow:0 9px 30px rgba(20,35,58,.20);
+    pointer-events:auto
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-lab.bim-panel-open .layer-row{
+    display:grid!important;
+    grid-template-columns:19px minmax(0,1fr)!important;
+    align-items:center!important;
+    gap:1px 4px!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:42px!important;
+    padding:2px 3px!important;
+    float:none!important;
+    border-bottom:1px solid #edf0f4
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-lab.bim-panel-open .layer-row .layer-name{
+    text-align:left;
+    font-size:10px!important;
+    line-height:1.2;
+    min-width:0;
+    padding:0!important;
+    min-height:22px
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-lab.bim-panel-open .layer-row .isolate{
+    grid-column:2;
+    text-align:left;
+    font-size:9px!important;
+    min-height:20px;
+    padding:0!important;
+    color:#0067c7
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-lab.bim-panel-open .layer-explanation{
+    grid-column:1/-1!important;
+    display:block;
+    padding-top:5px;
+    min-height:0;
+    max-height:60px;
+    overflow:hidden
+  }
+  .capability-workspace #work-content[data-module="projects"] .bim-lab .bim-layer-panel .bim-cut{
+    display:none!important
+  }
+}
+@media(max-width:800px) and (max-height:670px){
+  #main[data-chapter="0"] .chapter-home .home-bottom-cta{
+    bottom:24px!important
+  }
+  #main[data-chapter="4"] .capability-workspace #work-content[data-module="projects"] .work-title p{
+    display:none
+  }
+  #main[data-chapter="4"] .capability-workspace #work-content[data-module="projects"] .bim-mobile-bar{
+    height:39px
+  }
+}
+
 </style>
 </body></html>
