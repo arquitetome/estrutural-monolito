@@ -1679,9 +1679,8 @@ function ensureTypes(root=document){$$('button:not([type])',root).forEach(b=>b.t
 function docSymbol(){return '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M37 5H14v54h37V19L37 5Zm0 0v15h14M23 31h19M23 39h19M23 47h11"/></svg>';}
 E.init=function(c){ctx=c;ctx.state.simulation={active:false,landArea:1200,builtArea:2400,sellableArea:1800,landValue:1800000,other:1400000};ensureTypes();setupIntro();};
 E.cleanup=function(){deactivateGame();if(sceneDispose){sceneDispose();sceneDispose=null;}if(model){model.dispose();model=null;}clearInterval(spinTimer);spinTimer=0;cancelAnimationFrame(gameFrame);gameKeys.clear();};
-E.projectsView=function(){return `<div class="work-title"><div><h2>Coordenação BIM.</h2><p>Arquitetura e disciplinas técnicas coordenadas em um único modelo interativo.</p></div></div>
-<div class="pragma-bim-integration" role="region" aria-label="Visualização integrada de projetos e disciplinas técnicas">
-<iframe class="pragma-bim-iframe" src="./pragma-bim.html?v=20261009-r3" loading="eager" allow="fullscreen" allowfullscreen title="Visualizador de coordenação BIM integrado ao IncorpCycle"></iframe>
+E.projectsView=function(){return `<div class="pragma-bim-integration" role="region" aria-label="Visualização integrada de projetos e disciplinas técnicas">
+<iframe class="pragma-bim-iframe" src="./pragma-bim.html?v=20261009-r4" loading="eager" allow="fullscreen" allowfullscreen title="Visualizador de coordenação BIM integrado ao IncorpCycle"></iframe>
 </div>`;};
 function layerExplanation(){const x=layerDefs.find(x=>x[0]===activeLayer);return `<strong>${x[3]}</strong><p>${x[4]}</p>`;}
 function mountBim(){
@@ -2529,7 +2528,7 @@ function openReport(tab=0){state.reportTab=tab;openSheet('Estudo preliminar · l
 function reportContent(){if(state.simulation?.active||state.reportTab===3)return ICExtras.reportContent(state.reportTab);if(state.reportTab===0)return `<div class="report-number">01 — possibilidades de ocupação</div><h3>O começo de uma ideia.</h3><p>Volumetria conceitual para explorar a vocação de um terreno.</p><div class="report-visual"><img src="${window.ICAssets.building}" alt="Vista hiper-realista do empreendimento" decoding="async"></div><div class="report-data"><div><small>Uso ilustrativo</small><strong>Residencial</strong></div><div><small>Área hipotética do lote</small><strong>1.200 m²</strong></div></div><div class="report-foot"><span>Premissas a verificar</span><span>01 / 03</span></div>`;
  if(state.reportTab===1)return `<div class="report-number">02 — cenário econômico</div><h3>Números com contexto.</h3><p>Um exemplo-base para entender a relação entre custo e receita.</p><div class="report-visual" style="align-items:stretch;background:transparent"><div style="width:100%;padding:9px 0"><div class="work-row"><span>Receita hipotética</span><strong>R$ 14.760.000,00</strong></div><div class="work-row"><span>Construção</span><strong>R$ 8.640.000,00</strong></div><div class="work-row"><span>Terreno + outras despesas</span><strong>R$ 3.200.000,00</strong></div></div></div><div class="report-data"><div><small>Saldo antes de tributos/financiamento</small><strong>R$ 2.920.000,00</strong></div><div><small>Sem garantia de resultado</small><strong>Exemplo</strong></div></div><div class="report-foot"><span>Não é lucro líquido</span><span>02 / 03</span></div>`;
  return `<div class="report-number">03 — entorno e próximos passos</div><h3>O contexto também importa.</h3><p>Uma leitura inicial indica o que precisa ser investigado.</p><div class="report-visual" style="background:transparent;justify-content:flex-start"><div class="context-list"><div>${ico('pin')}<span><strong>Acessos e infraestrutura</strong><small>Identificar redes, mobilidade e serviços.</small></span></div><div>${ico('plan')}<span><strong>Legislação e restrições</strong><small>Verificar zoneamento e parâmetros vigentes.</small></span></div><div>${ico('people')}<span><strong>Entorno e vizinhança</strong><small>Mapear usos, conflitos e estudos necessários.</small></span></div></div></div><div class="report-data"><div><small>Próximo passo</small><strong>Validação técnica</strong></div></div><div class="report-foot"><span>Não é um EIV formal</span><span>03 / 03</span></div>`;}
-function cycle(){return `<section class="chapter chapter-cycle refined-cycle" aria-labelledby="cycle-title"><div class="capability-heading"><div><div class="eyebrow">04. Estratégia, projetos, obra, marketing e vendas.</div><h2 id="cycle-title">Como a IncorpCycle estrutura e apresenta um empreendimento.</h2></div><button class="text-button" data-action="service-request">Conversar sobre uma etapa ›</button></div><div id="cycle-workspace" class="capability-workspace"></div><div class="cycle-bottom"><span class="fine">Serviços por etapa. Coordenação com parceiros. Apresentação comercial e experiências digitais.</span></div></section>`;}
+function cycle(){return `<section class="chapter chapter-cycle refined-cycle" aria-labelledby="cycle-title"><div class="capability-heading"><div><div class="eyebrow">04. Estratégia, projetos, obra, marketing e vendas.</div><h2 id="cycle-title">Como a IncorpCycle estrutura e apresenta um empreendimento.</h2></div><button class="text-button" data-action="service-request">Conversar sobre uma etapa ›</button></div><div id="cycle-workspace" class="capability-workspace"></div></section>`;}
 function serviceContent(){const s=services[state.service];return `<div class="eyebrow">${s.tag}</div><h3>${s.name.replace('\n','<br> ')}</h3><p>${s.desc}</p><div class="cycle-deliveries">${s.items.map((t,i)=>`<span>${ico(s.icon[i])}${t}</span>`).join('')}</div><div class="actions"><button class="button black" ${state.service===1?'data-ic="open-projects"':state.service===5?'data-ic="open-marketing"':'data-action="work"'}>${state.service===1?'Explorar complementares':state.service===5?'Explorar as mídias':'Explorar o ambiente'}</button><button class="text-button" data-action="service-request">Conversar sobre esta etapa ›</button></div>`;}
 const renderers=[home,possibility,finance,delivery,cycle];
 function fitScene(){const m=$('#main'),w=m.clientWidth,h=m.clientHeight,small=w<=800;let left=0,top=0,width=w,height=h,zoom=1;
@@ -4141,6 +4140,42 @@ window.IC_PATOS_MARKET=[{"id":"JUCA-TE0584","kind":"market","category":"land","t
 }
 #media-gesture-hint.bim-gesture-hint img{
  filter:brightness(0) invert(1) drop-shadow(0 3px 5px rgba(0,0,0,.94))!important
+}
+</style>
+
+<style id="incorpcycle-bim-expansion-20261009">
+/* Remover rodapé redundante: todo o espaço recuperado pertence ao visualizador 3D. */
+#main[data-chapter="4"] .chapter-cycle.refined-cycle{
+ gap:9px!important;padding-bottom:3px!important
+}
+#main[data-chapter="4"] .chapter-cycle .cycle-bottom{display:none!important}
+#main[data-chapter="4"] .capability-workspace{
+ flex:1 1 auto!important;min-height:0!important;overflow:hidden!important
+}
+#main[data-chapter="4"] .capability-workspace>.work-layout{
+ flex:1 1 auto!important;height:100%!important;min-height:0!important
+}
+#main[data-chapter="4"] .capability-workspace #work-content[data-module="projects"]{
+ padding:5px 0 0!important;gap:0!important;overflow:hidden!important;
+ height:100%!important;flex:1 1 auto!important;min-height:0!important
+}
+#main[data-chapter="4"] .capability-workspace #work-content[data-module="projects"] .pragma-bim-integration{
+ flex:1 1 auto!important;width:100%!important;height:100%!important;min-height:0!important;
+ padding:0!important;background:#191d24!important;border-color:#323e4c!important;
+ overflow:hidden!important;border-radius:15px!important
+}
+#main[data-chapter="4"] .capability-workspace #work-content[data-module="projects"] .pragma-bim-iframe{
+ flex:1 1 auto!important;height:100%!important;width:100%!important;min-height:0!important;
+ background:#191d24!important;display:block!important
+}
+@media(max-width:800px){
+ #main[data-chapter="4"] .chapter-cycle.refined-cycle{gap:6px!important;padding-bottom:0!important}
+ #main[data-chapter="4"] .capability-workspace #work-content[data-module="projects"]{
+  padding:3px 0 0!important
+ }
+ #main[data-chapter="4"] .capability-workspace #work-content[data-module="projects"] .pragma-bim-integration{
+  border-radius:10px!important;min-height:0!important
+ }
 }
 </style>
 </body></html>
