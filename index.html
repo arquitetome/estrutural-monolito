@@ -994,16 +994,16 @@ window.createArchitecture = function(canvas, onReady, onFailure, options={}) {
  function heroStreetLighting(){
    const steel=[.25,.29,.31,.56,.22],
          arm=[.39,.42,.43,.47,.17],
-         warmLens=[1.00,.87,.60,.20,2.35],
-         disabledLens=[.54,.54,.50,.88,.08];
-   for(const x of [-14,-7,0,7,14]){
+         warmLens=[1.00,.87,.60,.20,2.35];
+   // Poste da extremidade esquerda removido do modelo inteiro.
+   for(const x of [-7,0,7,14]){
      // Base na calçada (z=8.20), nunca no meio da pista.
      box(x,.24,8.30,.37,.17,.37,steel);
      box(x,1.57,8.30,.105,2.82,.105,steel);
      sphere(x,3.04,8.30,.105,.11,.105,arm);
      pipe([x,3.01,8.30],[x,3.01,9.02],.055,arm);
      roundBox(x,2.98,9.06,.40,.12,.50,.08,arm);
-     box(x,2.895,9.10,.28,.032,.38,x===-14?disabledLens:warmLens);
+     box(x,2.895,9.10,.28,.032,.38,warmLens);
    }
    group('hero-street-lamps',0,true);
  }
