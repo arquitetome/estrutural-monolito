@@ -1,0 +1,79 @@
+name: IncorpCycle - Teste de interface mobile
+on:
+  push:
+    paths:
+      - .github/workflows/incorpcycle-mobile-cta-qa.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar posicionamento mobile e troca de tipologias
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4179 --bind 127.0.0.1 >/tmp/incorp-server.log 2>&1 &
+          mkdir -p /tmp/incorp-mobile-run
+          npm install --prefix /tmp/incorp-mobile-run puppeteer-core --no-audit --no-fund >/tmp/incorp-install.log 2>&1
+          cat >/tmp/incorp-mobile-run/check.cjs <<'JS'
+          const puppeteer=require('puppeteer-core');
+          (async()=>{
+            const browser=await puppeteer.launch({executablePath:'/usr/bin/google-chrome',headless:true,
+              args:['--no-sandbox','--disable-dev-shm-usage','--enable-webgl','--use-gl=angle','--use-angle=swiftshader']});
+            const page=await browser.newPage();
+            const errs=[];page.on('pageerror',e=>errs.push(e.message));
+            await page.setViewport({width:390,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true});
+            await page.goto('http://127.0.0.1:4179/',{waitUntil:'domcontentloaded',timeout:60000});
+            await page.waitForSelector('.home-bottom-cta .actions .text-button',{timeout:25000});
+            const home=await page.evaluate(()=>{
+              const r=e=>{const b=e.getBoundingClientRect();return{x:b.x,y:b.y,w:b.width,h:b.height,right:b.right,bottom:b.bottom,center:b.x+b.width/2}};
+              const a=document.querySelector('.home-bottom-cta .button'),b=document.querySelector('.home-bottom-cta .text-button');
+              const x=r(a),y=r(b),form=getComputedStyle(a).fontSize,link=getComputedStyle(b).fontSize;
+              return {first:x,second:y,form,link,vertical:y.y>=x.bottom,centersAligned:Math.abs(x.center-y.center)<=9};
+            });
+            console.log('MOBILE HOME',JSON.stringify(home));
+            if(!home.vertical||!home.centersAligned||parseFloat(home.form)<13||parseFloat(home.link)<13) throw Error('CTA mobile not stacked, centered or enlarged');
+            await page.screenshot({path:'/tmp/incorp-mobile-home.png'});
+            await page.evaluate(()=>window.incorpDebug.goChapter(1));
+            await page.waitForSelector('#typology-select',{timeout:15000});
+            const select=await page.evaluate(()=>{
+               const el=document.getElementById('typology-select');
+               return{count:el?.options.length,value:el?.value,oldButtons:document.querySelectorAll('.possibility-options [data-variant]').length,
+                height:el?.getBoundingClientRect().height,display:getComputedStyle(el).display};
+            });
+            console.log('MOBILE POSSIBILITIES',JSON.stringify(select));
+            if(select.count!==12||select.oldButtons!==0||select.height<40||select.value!=='residencial')throw Error('Native typology selector misconfigured');
+            await page.select('#typology-select','hotel');
+            await page.waitForFunction(()=>window.incorpDebug?.state?.variant==='hotel',{timeout:12000});
+            const hotel=await page.evaluate(()=>({state:window.incorpDebug?.state?.variant,selected:document.getElementById('typology-select')?.value,model:window.incorpDebug?.architecture?.state?.type}));
+            console.log('MOBILE HOTEL SELECT',JSON.stringify(hotel));
+            if(hotel.state!=='hotel'||hotel.selected!=='hotel'||hotel.model!=='hotel')throw Error('Selecting hotel did not refresh model');
+            await page.screenshot({path:'/tmp/incorp-mobile-possibilities.png'});
+            // Desktop: menu remains a single select; home buttons retain horizontal layout.
+            const desktop=await browser.newPage();
+            await desktop.setViewport({width:1440,height:900,deviceScaleFactor:1,isMobile:false});
+            await desktop.goto('http://127.0.0.1:4179/',{waitUntil:'domcontentloaded',timeout:60000});
+            await desktop.waitForSelector('.home-bottom-cta .actions .text-button',{timeout:25000});
+            const orientation=await desktop.evaluate(()=>getComputedStyle(document.querySelector('.home-bottom-cta .actions')).flexDirection);
+            await desktop.evaluate(()=>window.incorpDebug.goChapter(1));
+            const desktopSelect=await desktop.evaluate(()=>document.querySelectorAll('.possibility-options select#typology-select').length);
+            console.log('DESKTOP',JSON.stringify({ctaDirection:orientation,selectCount:desktopSelect}));
+            if(orientation==='column'||desktopSelect!==1)throw Error('Desktop layout regression');
+            if(errs.length)throw Error('JS runtime errors '+errs.join('; '));
+            console.log('PASS MOBILE/ DESKTOP CTA AND TYPOLOGY');
+            await browser.close();
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)});
+          JS
+          node /tmp/incorp-mobile-run/check.cjs
+      - name: Capturas de validação
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: incorp-mobile-qa-capturas
+          path: /tmp/incorp-mobile-*.png
+          if-no-files-found: ignore
+          retention-days: 7
