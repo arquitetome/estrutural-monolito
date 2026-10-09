@@ -1679,9 +1679,7 @@ function ensureTypes(root=document){$$('button:not([type])',root).forEach(b=>b.t
 function docSymbol(){return '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M37 5H14v54h37V19L37 5Zm0 0v15h14M23 31h19M23 39h19M23 47h11"/></svg>';}
 E.init=function(c){ctx=c;ctx.state.simulation={active:false,landArea:1200,builtArea:2400,sellableArea:1800,landValue:1800000,other:1400000};ensureTypes();setupIntro();};
 E.cleanup=function(){deactivateGame();if(sceneDispose){sceneDispose();sceneDispose=null;}if(model){model.dispose();model=null;}clearInterval(spinTimer);spinTimer=0;cancelAnimationFrame(gameFrame);gameKeys.clear();};
-E.projectsView=function(){return `<div class="pragma-bim-integration" role="region" aria-label="Visualização integrada de projetos e disciplinas técnicas">
-<iframe class="pragma-bim-iframe" src="./pragma-bim.html?v=20261009-r4" loading="eager" allow="fullscreen" allowfullscreen title="Visualizador de coordenação BIM integrado ao IncorpCycle"></iframe>
-</div>`;};
+E.projectsView=function(){return '<div class="pragma-bim-integration" role="region" aria-label="Visualização BIM integrada: modelo carregado uma única vez"></div>';};
 function layerExplanation(){const x=layerDefs.find(x=>x[0]===activeLayer);return `<strong>${x[3]}</strong><p>${x[4]}</p>`;}
 function mountBim(){
  const c=$('#bim-canvas');if(!c)return;
@@ -2537,7 +2535,7 @@ function fitScene(){const m=$('#main'),w=m.clientWidth,h=m.clientHeight,small=w<
  sceneHost.style.left=left+'px';sceneHost.style.top=top+'px';sceneHost.style.width=width+'px';sceneHost.style.height=height+'px';sceneHost.style.opacity=state.chapter<2?'1':'0';sceneHost.style.visibility=state.chapter<2?'visible':'hidden';sceneHost.style.pointerEvents=state.chapter<2?'auto':'none';$('.scene-tools').style.display=state.chapter===0?'none':'flex';
  if(architecture){architecture.state.zoom=zoom*(state.selectedFloor>=0?.74:state.explode?.67:1);architecture.redraw();}
 }
-function goChapter(index,{history=true,work=null}={}){index=Math.max(0,Math.min(4,index));if(index===4){state.work=work||'projects';}ICExtras.cleanup();ICExtras.cancelIntro?.();const wl=$('.work-layout');if(wl&&wl.closest('#chapter-content'))$('#workspace').append(wl);if($('#work-content'))$('#work-content').innerHTML='';state.chapter=index;if(index<2){state.selectedFloor=-1;state.onlyFloor=false;}$('#main').dataset.chapter=index;$('#chapter-content').innerHTML=renderers[index]();$('#chapter-number').textContent=String(index+1).padStart(2,'0');$('#chapter-title').textContent=chapterNames[index];$('#next-label').textContent=nextNames[index];$('.back-chapter').disabled=index===0;$$('.chapter-dots button').forEach((b,i)=>{if(i===index)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current')});$('#mobile-menu').hidden=true;$('.menu-button').setAttribute('aria-expanded','false');
+function goChapter(index,{history=true,work=null}={}){index=Math.max(0,Math.min(4,index));if(index===4){state.work=work||'projects';}if(index!==4)ICPersistentBim.hide();ICExtras.cleanup();ICExtras.cancelIntro?.();const wl=$('.work-layout');if(wl&&wl.closest('#chapter-content'))$('#workspace').append(wl);if($('#work-content'))$('#work-content').innerHTML='';state.chapter=index;if(index<2){state.selectedFloor=-1;state.onlyFloor=false;}$('#main').dataset.chapter=index;$('#chapter-content').innerHTML=renderers[index]();$('#chapter-number').textContent=String(index+1).padStart(2,'0');$('#chapter-title').textContent=chapterNames[index];$('#next-label').textContent=nextNames[index];$('.back-chapter').disabled=index===0;$$('.chapter-dots button').forEach((b,i)=>{if(i===index)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current')});$('#mobile-menu').hidden=true;$('.menu-button').setAttribute('aria-expanded','false');
  if(architecture&&index<2){if(index===0&&state.variant!=='residencial'){state.variant='residencial';architecture.build('residencial');}architecture.state.selectedFloor=-1;architecture.state.onlyFloor=false;architecture.state.floorSlide=0;state.selectedFloor=-1;state.onlyFloor=false;Object.assign(architecture.state,{structure:1,crane:0,craneLift:1});architecture.animate({build:1,explode:state.explode&&index===1?1:0,night:index===1&&state.night?1:0,yaw:index===0?-.17:-.35,pitch:.61},950);}
  if(index===4){$('#cycle-workspace').append($('.work-layout'));renderWork();}if(index===3)renderDelivery();fitScene();ICExtras.onChapter();if(sceneHost.classList.contains('no-webgl'))applyFallback();transition($('#chapter-content'));if(index===2)updateFinance();if(history){try{window.history.replaceState(null,'','#'+['inicio','possibilidades','cenario','entrega','ciclo'][index]);}catch{}}}
 function updateFinance(){ICExtras.updateFinance();}
@@ -2577,7 +2575,56 @@ if(state.work==='projects')return ICExtras.projectsView();if(state.work==='marke
  if(state.work==='stock')return `${workHeading('Disponibilidade, sem ruído.','Clique em uma unidade para alternar o status de demonstração.')}<div class="work-kpis"><div><small>Disponíveis</small><strong>${counts[0]}</strong></div><div><small>Em negociação</small><strong>${counts[1]}</strong></div><div><small>Reservadas</small><strong>${counts[2]}</strong></div></div><div class="unit-grid">${units.map((s,i)=>`<button class="unit" data-unit="${i}" data-status="${s}" aria-label="Unidade ${101+i}, ${['disponível','em negociação','reservada'][s]}. Clique para alterar no exemplo."><strong>${101+i}</strong><small>${['Disponível','Em negociação','Reservada'][s]}</small></button>`).join('')}</div><p class="work-footnote">Unidades fictícias. Clicar não efetua reserva, proposta, bloqueio comercial ou contratação.</p>`;
  return `${workHeading('Obra com parceiros.','Um ambiente para selecionar perfis, acompanhar etapas e dar clareza ao processo.')}<div class="work-panels"><section class="work-panel"><h3>Perfis de parceiros para comparação</h3>${['Perfil A · estrutura e execução','Perfil B · gestão e compatibilização','Perfil C · acabamentos e entrega'].map((n,i)=>`<label class="partner-row"><input type="checkbox" data-partner="${i}" ${state.partners.includes(i)?'checked':''}><span class="partner-label">${n}<small>${['Frente principal de execução','Acompanhamento, gestão e compatibilização','Fase final, acabamento e entrega'][i]}</small></span></label>`).join('')}<p class="fine" style="margin-top:20px" id="partner-summary">${state.partners.length} perfil(is) selecionado(s) para comparação. Nesta demonstração, o objetivo é mostrar como a curadoria de parceiros pode ser apresentada.</p></section><section class="work-panel"><h3>Linha do tempo ilustrativa da obra</h3>${[['Planejamento',100],['Contratação de parceiros',45],['Execução por parceiros',0],['Entrega',0]].map(([n,v])=>`<div style="margin:17px 0"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:8px"><span>${n}</span><span>${v}%</span></div><div class="bar-track"><span style="width:${v}%;background:#6f95b9"></span></div></div>`).join('')}</section></div><p class="work-footnote">A IncorpCycle aparece aqui como coordenadora e curadora de parceiros. O ambiente demonstra acompanhamento, não contratação automática ou execução própria.</p>`;
 }
-function renderWork(){ICExtras.cleanup();state.service=({marketing:5,projects:1,overview:state.strategyTab,partners:4,stock:6,leads:6})[state.work]??0;$('#work-content').innerHTML=workView();$$('[data-work]', $('.work-nav')).forEach(b=>b.classList.toggle('active',b.dataset.work===state.work||(b.dataset.work==='stock'&&state.work==='leads')));ICExtras.mountWork();if(['stock','leads'].includes(state.work))$('#work-content').insertAdjacentHTML('afterbegin',`<nav class="sales-subnav segment"><button type="button" data-work="stock" aria-pressed="${state.work==='stock'}">Estoque</button><button type="button" data-work="leads" aria-pressed="${state.work==='leads'}">Relacionamento</button></nav>`);transition($('#work-content'));}
+/* INCORP BIM: visualizador persistente. O iframe vive sempre no body, fora dos cards recriados
+   e do layout movido entre capítulos. Nunca remontar nem alterar src ao trocar módulos. */
+const ICPersistentBim=(()=>{
+ let host=null,frame=null,active=false,raf=0,lastBox='';
+ const asset='./pragma-bim.html?v=20261009-r5';
+ const ensure=()=>{
+  if(host)return;
+  host=document.createElement('div');
+  host.id='incorp-bim-persistent-portal';host.hidden=true;
+  host.setAttribute('aria-label','Coordenação BIM interativa');
+  frame=document.createElement('iframe');
+  frame.className='pragma-bim-iframe';frame.src=asset;
+  frame.title='Coordenação BIM integrada ao IncorpCycle';
+  frame.setAttribute('allowfullscreen','');
+  frame.setAttribute('allow','fullscreen');
+  frame.loading='eager';
+  host.appendChild(frame);
+  document.body.appendChild(host);
+  window.ICBimDebug={created:1,get iframe(){return frame;},get visible(){return active&&!host.hidden;}};
+ };
+ const align=()=>{
+  if(!active||!host)return;
+  const slot=document.querySelector('#work-content[data-module="projects"] .pragma-bim-integration');
+  if(!slot||!slot.isConnected){host.hidden=true;return}
+  const b=slot.getBoundingClientRect();
+  if(b.width<130||b.height<85||b.bottom<=0||b.top>=innerHeight){
+   host.hidden=true;return;
+  }
+  const next=[Math.round(b.left*10)/10,Math.round(b.top*10)/10,
+              Math.round(b.width*10)/10,Math.round(b.height*10)/10].join(',');
+  if(next!==lastBox){
+   const [x,y,w,h]=next.split(',').map(Number);
+   host.style.left=x+'px';host.style.top=y+'px';
+   host.style.width=w+'px';host.style.height=h+'px';lastBox=next;
+  }
+  host.hidden=false;
+ };
+ const tick=()=>{raf=0;if(!active)return;align();raf=requestAnimationFrame(tick);};
+ return {
+  show(){
+   ensure();active=true;lastBox='';align();
+   if(!raf)raf=requestAnimationFrame(tick);
+  },
+  hide(){
+   active=false;if(host)host.hidden=true;
+   if(raf){cancelAnimationFrame(raf);raf=0}
+  }
+ };
+})();
+function renderWork(){ICExtras.cleanup();state.service=({marketing:5,projects:1,overview:state.strategyTab,partners:4,stock:6,leads:6})[state.work]??0;const panel=$('#work-content');panel.innerHTML=workView();$$('[data-work]', $('.work-nav')).forEach(b=>b.classList.toggle('active',b.dataset.work===state.work||(b.dataset.work==='stock'&&state.work==='leads')));ICExtras.mountWork();if(['stock','leads'].includes(state.work))panel.insertAdjacentHTML('afterbegin',`<nav class="sales-subnav segment"><button type="button" data-work="stock" aria-pressed="${state.work==='stock'}">Estoque</button><button type="button" data-work="leads" aria-pressed="${state.work==='leads'}">Relacionamento</button></nav>`);if(state.work==='projects')ICPersistentBim.show();else ICPersistentBim.hide();transition(panel);}
 function openWork(){returnFocus=document.activeElement;goChapter(4,{work:state.work});}
 function setField(el){const name=el.dataset.field;if(!name)return;state.form[name]=el.type==='checkbox'?el.checked:el.value;if(name==='front'||name==='depth'){const a=$('#dimension-area');if(a)a.textContent=`Área retangular aproximada: ${getArea()?dec(getArea(),0):'—'} m². Não representa levantamento de terrenos irregulares.`;}}
 document.addEventListener('input',e=>{const el=e.target;if(el.id==='floor-offset'&&architecture){architecture.pause();architecture.state.floorSlide=Number(el.value);architecture.redraw();return;}if(el.dataset.field)setField(el);if(el.id==='price'||el.id==='cost'){state[el.id]=Number(el.value);updateFinance();}});
@@ -4176,6 +4223,29 @@ window.IC_PATOS_MARKET=[{"id":"JUCA-TE0584","kind":"market","category":"land","t
  #main[data-chapter="4"] .capability-workspace #work-content[data-module="projects"] .pragma-bim-integration{
   border-radius:10px!important;min-height:0!important
  }
+}
+</style>
+
+<style id="incorp-bim-single-load-portal">
+/* A caixa pertence ao layout; o iframe fica fora das áreas recriadas para não haver novo download. */
+#incorp-bim-persistent-portal{
+ position:fixed;left:0;top:0;z-index:75;display:flex;flex-direction:column;
+ overflow:hidden;border-radius:15px;background:#191d24;
+ border:1px solid #344758;box-shadow:0 7px 18px #0002;
+ pointer-events:auto;isolation:isolate
+}
+#incorp-bim-persistent-portal[hidden]{display:none!important}
+#incorp-bim-persistent-portal>.pragma-bim-iframe{
+ display:block;width:100%;height:100%;min-height:0;min-width:0;
+ border:0;background:#191d24;flex:1 1 auto
+}
+#main[data-chapter="4"] .capability-workspace #work-content[data-module="projects"] .pragma-bim-integration{
+ position:relative;display:block!important;flex:1 1 auto!important;height:100%!important;
+ width:100%!important;min-height:0!important;background:#191d24!important;
+ border-color:#344758!important;overflow:hidden!important
+}
+@media(max-width:800px){
+ #incorp-bim-persistent-portal{border-radius:10px}
 }
 </style>
 </body></html>
