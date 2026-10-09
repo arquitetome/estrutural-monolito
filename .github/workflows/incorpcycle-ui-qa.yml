@@ -187,7 +187,8 @@ jobs:
               return !!doc?.querySelector('#bimCanvas')&&!!doc?.querySelector('#cutRange')&&!!doc?.querySelector('.pbimLayers');
             },null,{timeout:30000});
             const bim=await page.evaluate(()=>{
-              const x=document.querySelector('#work-content[data-module="projects"]'),iframe=x?.querySelector('.pragma-bim-iframe'),
+              const x=document.querySelector('#work-content[data-module="projects"]'),
+                iframe=document.querySelector('#incorp-bim-persistent-portal .pragma-bim-iframe'),
                 d=iframe?.contentDocument,cut=d?.querySelector('#cutRange'),ir=iframe?.getBoundingClientRect(),
                 cr=cut?.getBoundingClientRect();
               return {found:!!iframe,hasArchitecture:!!d?.querySelector('[data-layer="arch"]'),
@@ -220,6 +221,22 @@ jobs:
             console.log('PRAGMA BIM LOAD',JSON.stringify(loadState));
             if(!loadState.text?.includes('Visualização pronta'))throw new Error('PRAGMA BIM model did not load: '+loadState.text);
             await page.screenshot({path:'/tmp/incorp-projects.png'});
+            // Persistência real: sair de Projetos e voltar não cria outro iframe nem recarrega o BIM.
+            await page.evaluate(()=>{
+              window.__qaBimFrame=window.ICBimDebug?.iframe;
+              if(window.__qaBimFrame?.contentWindow)window.__qaBimFrame.contentWindow.__qaBimLoadedOnce=true;
+            });
+            await page.evaluate(()=>window.incorpDebug.goChapter(4,{work:'marketing'}));
+            await page.evaluate(()=>window.incorpDebug.goChapter(4,{work:'projects'}));
+            await page.locator('iframe.pragma-bim-iframe').waitFor({state:'visible',timeout:20000});
+            const persisted=await page.evaluate(()=>(
+              window.__qaBimFrame===window.ICBimDebug?.iframe &&
+              window.ICBimDebug?.created===1 &&
+              window.ICBimDebug?.visible &&
+              window.__qaBimFrame?.contentWindow?.__qaBimLoadedOnce===true
+            ));
+            console.log('INCORP BIM PERSISTENTE',persisted);
+            if(!persisted)throw new Error('BIM reloaded after switching work tabs');
             await page.evaluate(()=>window.incorpDebug.goChapter(3));
             await page.locator('[data-delivery="6"]').click();
             await sleep(650);
@@ -228,6 +245,25 @@ jobs:
             console.log('GAME',JSON.stringify(controls));
             if(controls.overlap)throw new Error('Game buttons overlap');
             await page.screenshot({path:'/tmp/incorp-game.png'});
+            await page.evaluate(()=>window.incorpDebug.goChapter(0));
+            await page.evaluate(()=>document.querySelector('button.nav-start')?.click());
+            const land=await page.evaluate(()=>{
+              const sheet=document.getElementById('sheet'),body=document.getElementById('sheet-body');
+              return {open:!!sheet?.open,title:document.getElementById('sheet-title')?.innerText,
+                cards:sheet?.querySelectorAll('.terrain-card-v2').length,
+                preserved:!!sheet?.querySelector('[data-land-route="owner"]')&&
+                  !!sheet?.querySelector('[data-terrain-map="patos"]')&&
+                  !!sheet?.querySelector('[data-terrain-map="auctions"]'),
+                portfolio:!!sheet?.querySelector('.local-portfolio'),
+                disclaimer:body?.innerText?.includes('O mapa de imobiliárias e o mapa de leilões continuam separados.'),
+                topTerrain:[...document.querySelectorAll('.top-nav button,#mobile-menu button')]
+                  .some(b=>b.textContent.trim()==='Terreno')};
+            });
+            console.log('INCORP COMEÇAR TERRRENO',JSON.stringify(land));
+            if(!land.open||!land.title?.includes('Toda oportunidade tem um começo.')||
+              !land.title?.includes('Qual seu ponto de partida?')||
+              land.cards!==3||!land.preserved||land.portfolio||land.disclaimer||land.topTerrain)
+              throw new Error('Começar should show three terrain paths without session notices');
             if(errors.length)throw new Error('Page runtime errors: '+errors.join('; '));
             await browser.close();
             console.log('PASS BROWSER QA: home, car, variants, floor, projects, game');
