@@ -2449,7 +2449,7 @@ const services=[
  {short:'Vendas',name:'Do interesse à decisão.',tag:'07 · Vendas e estoque',desc:'Organize o atendimento e a disponibilidade das unidades ao longo da comercialização.',items:['Funil de atendimento','Disponibilidade de unidades','Indicadores comerciais'],icon:['people','plan','chart']}
 ];
 function home(){return `<section class="chapter chapter-home" aria-labelledby="home-title"><div class="home-heading"><h1 id="home-title">Seu terreno.<br> <span>Uma nova perspectiva.</span></h1><p>Veja o que construir, quanto pode custar e por onde começar.</p><div class="actions"><button class="button" data-land="hub">Analisar meu terreno</button><button class="text-button" data-chapter="3">Ver a entrega <span aria-hidden="true">›</span></button></div><div class="free">Uma ideia começa aqui, estudo preliminar sem compromisso.</div></div><span class="demo-label"></span></section>`;}
-function possibility(){return `<section class="chapter split-chapter enhanced-possibility" aria-labelledby="possibility-title"><div class="copy"><div class="eyebrow">01. Enxergue as possibilidades.</div><h2 id="possibility-title">Um terreno.<br> Vários caminhos.</h2><p>Explore o empreendimento.<br> Depois, veja cada andar.</p><div class="possibility-options typology-picker interactive"><label class="sr-only" for="typology-select">Escolha o tipo de empreendimento</label><div class="typology-select-shell"><select id="typology-select" name="typology" aria-label="Selecionar tipo de empreendimento">${Object.entries(variants).map(([k,v])=>`<option value="${k}" ${state.variant===k?'selected':''}>${v.label}</option>`).join('')}</select><span class="typology-select-chevron" aria-hidden="true">⌄</span></div></div><p class="fine">Modelos conceituais. Usos e dimensões dependem de análise técnica.${state.completed?' <strong>Seus dados já acompanham esta sessão.</strong>':''}</p><button class="legal-link" data-land="legal-report">${ICLand.status().label} ↗</button><button class="text-button" style="font-size:11px;padding:0;min-height:25px" data-land="envelope">Explorar envelope informado ↗</button></div><div class="floor-number-overlay" aria-label="Seleção de pavimentos" ${state.explode?'':'hidden'}>${Array.from({length:architecture?.state.floorCount||({casa:2,casas:2,logistico:1,hotel:7,studios:10,misto:6,comercial:6,multi:6}[state.variant]||8)},(_,i)=>`<button type="button" data-floor-number="${i}" aria-label="Abrir ${i===0?'térreo':i+'º pavimento'} à esquerda" aria-pressed="${state.selectedFloor===i}" title="${i===0?'Térreo':i+'º pavimento'}">${String(i+1).padStart(2,'0')}</button>`).join('')}</div><div class="model-controls interactive"><button class="soft-button" data-action="explode" ${['loteamento','chacaras','desmembramento'].includes(state.variant)?'hidden':''} aria-pressed="${state.explode}">${ico('layers')}<span>${state.explode?'Reunir pavimentos':'Separar pavimentos'}</span></button><button class="soft-button" data-action="night" aria-pressed="${state.night}">${ico('sun')}<span>${state.night?'Apagar luzes':'Acender luzes'}</span></button></div></section>`;}
+function possibility(){return `<section class="chapter split-chapter enhanced-possibility" aria-labelledby="possibility-title"><div class="copy"><div class="eyebrow">01. Enxergue as possibilidades.</div><h2 id="possibility-title">Um terreno.<br> Vários caminhos.</h2><p>Explore o empreendimento.<br> Depois, veja cada andar.</p><div class="possibility-options typology-picker interactive"><label class="sr-only" for="typology-select">Escolha o tipo de empreendimento</label><div class="typology-select-shell"><select id="typology-select" name="typology" aria-label="Selecionar tipo de empreendimento">${Object.entries(variants).map(([k,v])=>`<option value="${k}" ${state.variant===k?'selected':''}>${v.label}</option>`).join('')}</select><span class="typology-select-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></div>${Object.entries(variants).map(([k,v])=>`<button type="button" class="possibility-option" data-variant="${k}" aria-pressed="${state.variant===k}"><span class="radio" aria-hidden="true"></span><span><strong>${v.label}</strong><small>${v.desc}</small></span></button>`).join('')}</div><p class="fine">Modelos conceituais. Usos e dimensões dependem de análise técnica.${state.completed?' <strong>Seus dados já acompanham esta sessão.</strong>':''}</p><button class="legal-link" data-land="legal-report">${ICLand.status().label} ↗</button><button class="text-button" style="font-size:11px;padding:0;min-height:25px" data-land="envelope">Explorar envelope informado ↗</button></div><div class="floor-number-overlay" aria-label="Seleção de pavimentos" ${state.explode?'':'hidden'}>${Array.from({length:architecture?.state.floorCount||({casa:2,casas:2,logistico:1,hotel:7,studios:10,misto:6,comercial:6,multi:6}[state.variant]||8)},(_,i)=>`<button type="button" data-floor-number="${i}" aria-label="Abrir ${i===0?'térreo':i+'º pavimento'} à esquerda" aria-pressed="${state.selectedFloor===i}" title="${i===0?'Térreo':i+'º pavimento'}">${String(i+1).padStart(2,'0')}</button>`).join('')}</div><div class="model-controls interactive"><button class="soft-button" data-action="explode" ${['loteamento','chacaras','desmembramento'].includes(state.variant)?'hidden':''} aria-pressed="${state.explode}">${ico('layers')}<span>${state.explode?'Reunir pavimentos':'Separar pavimentos'}</span></button><button class="soft-button" data-action="night" aria-pressed="${state.night}">${ico('sun')}<span>${state.night?'Apagar luzes':'Acender luzes'}</span></button></div></section>`;}
 function finance(){const html=`<section class="chapter chapter-finance" aria-labelledby="finance-title"><div class="copy"><div class="eyebrow">02. Coloque as premissas à prova.</div><h2 id="finance-title">Entenda a conta.<br> <span style="color:#86868b">Antes de investir.</span></h2><p>${state.simulation.active?'Os dados informados no início. Agora, em perspectiva.':'Uma conta de exemplo. Comece o cadastro para simular com seus dados.'}</p><div class="scenario-recap"><div><span>Área construída</span><strong>${dec(state.simulation.builtArea,0)} m²</strong></div><div><span>Área vendável / privativa</span><strong>${dec(state.simulation.sellableArea,0)} m²</strong></div><div><span>Venda / m²</span><strong id="price-output">${money(state.price)}</strong></div><div><span>Construção / m²</span><strong id="cost-output">${money(state.cost)}</strong></div></div><p class="fine">Premissas fictícias: 1.800 m² de área vendável, 2.400 m² de construção, R$ 1.800.000,00 de terreno e R$ 1.400.000,00 de outras despesas.</p><button class="text-button" data-action="assumptions" style="font-size:12px;margin-top:8px">Entender as premissas <span aria-hidden="true">+</span></button></div><div class="finance-panel"><div class="finance-top"><span>Cenário residencial</span><span class="demo-badge">Exemplo, não avaliação</span></div><div class="big-number" id="revenue">R$ 14.760.000,00</div><div class="number-label">Receita potencial de vendas</div><div class="finance-chart"><div class="chart-row"><span>Terreno</span><div class="bar-track"><span id="bar-land"></span></div><strong>R$ 1.800.000,00</strong></div><div class="chart-row"><span>Construção</span><div class="bar-track"><span id="bar-build"></span></div><strong id="build-value"></strong></div><div class="chart-row"><span>Outras despesas</span><div class="bar-track"><span id="bar-other"></span></div><strong>R$ 1.400.000,00</strong></div><div class="chart-row accent"><span>Custo total</span><div class="bar-track"><span id="bar-total"></span></div><strong id="total-value"></strong></div></div><div class="finance-result" aria-live="polite"><div><span>Saldo ilustrativo</span><strong id="balance"></strong></div><div class="percentage" id="margin"></div></div><p class="fine" id="finance-disclaimer">Antes de tributos sobre a receita, financiamento e efeitos do prazo. Não é lucro líquido, promessa de retorno ou viabilidade aprovada.</p></div></section>`;return ICExtras.financeView(html);}
 function delivery(){return `<section class="chapter chapter-delivery refined-delivery" aria-labelledby="delivery-title"><div class="copy"><div class="eyebrow">03. Clareza para decidir. Experiências para apresentar.</div><h2 id="delivery-title">Sua próxima decisão.<br> <span style="color:#86868b">Em um estudo.</span></h2><p>Entenda o terreno. Veja os números. Experimente como o empreendimento pode ser apresentado.</p><div class="delivery-features"><span>${ico('plan')} Ocupação e entorno</span><span>${ico('chart')} Cenário econômico</span><span>${ico('layers')} Mídias imersivas</span></div><div class="actions"><button class="button" data-action="open-report">Abrir o estudo <span aria-hidden="true">↗</span></button><button class="text-button" data-action="start">Analisar meu terreno ›</button></div><p class="fine mobile-optional-disclaimer">Amostra demonstrativa. O estudo preliminar é a porta de entrada; projetos e produção de mídias são escopos separados. Não há análise automática do terreno.</p></div><div class="delivery-browser"><div class="delivery-browser-top"><span>Explore a entrega</span><span class="demo-badge">Demonstração</span></div><nav class="delivery-nav" aria-label="Prévia das entregas">${[['estudo','Estudo'],['0','Imagens'],['7','Plantas'],['1','Vídeo'],['2','3D + RA'],['6','Gamificação']].map(([k,l])=>`<button type="button" data-delivery="${k}" aria-pressed="${state.deliveryMode===k}">${l}</button>`).join('')}</nav><div id="delivery-display"></div></div></section>`;}
 function renderDelivery(){ICExtras.cleanup();const d=$('#delivery-display');if(!d)return;
@@ -3872,5 +3872,85 @@ window.IC_PATOS_MARKET=[{"id":"JUCA-TE0584","kind":"market","category":"land","t
   }
 }
 
+</style>
+
+<style id="ic-20261009-typology-responsive-correction">
+/* Desktop: restaurar a grade original de opções da página Possibilidades. */
+@media (min-width:801px){
+ #main[data-chapter="1"] .enhanced-possibility .possibility-options.typology-picker{
+   display:grid!important;
+   grid-template-columns:repeat(2,minmax(0,1fr))!important;
+   gap:0 20px!important;
+   width:420px!important;
+   max-width:100%!important;
+   margin:20px 0 0!important;
+   align-items:stretch!important;
+ }
+ #main[data-chapter="1"] .enhanced-possibility .possibility-options.typology-picker>.typology-select-shell,
+ #main[data-chapter="1"] .enhanced-possibility .possibility-options.typology-picker>.sr-only{
+   display:none!important;
+ }
+ #main[data-chapter="1"] .enhanced-possibility .possibility-options.typology-picker>.possibility-option{
+   display:flex!important;
+   min-width:0;
+   width:100%!important;
+   text-align:left!important;
+   pointer-events:auto!important;
+ }
+}
+/* Celular: conservar a lista suspensa, sem duplicar as opções da grade desktop. */
+@media (max-width:800px){
+ #main[data-chapter="1"] .enhanced-possibility .possibility-options.typology-picker{
+   display:block!important;
+   width:100%!important;
+   max-width:100%!important;
+ }
+ #main[data-chapter="1"] .enhanced-possibility .possibility-options.typology-picker>.possibility-option{
+   display:none!important;
+ }
+ #main[data-chapter="1"] .enhanced-possibility .typology-select-shell{
+   display:block!important;
+ }
+}
+/* A seta fica exatamente no centro da bolinha azul e mantém o select clicável. */
+#main[data-chapter="1"] .enhanced-possibility .typology-select-chevron{
+ position:absolute;
+ top:50%;
+ right:9px;
+ width:32px;
+ height:32px;
+ transform:translateY(-50%);
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ border-radius:50%;
+ background:#0071e3;
+ color:#fff;
+ font-size:initial;
+ line-height:1;
+ box-shadow:0 2px 8px rgba(0,113,227,.19);
+ pointer-events:none;
+}
+#main[data-chapter="1"] .enhanced-possibility .typology-select-chevron svg{
+ display:block;
+ width:18px;
+ height:18px;
+ flex:none;
+ fill:none;
+ stroke:#fff;
+ stroke-width:2.7;
+ stroke-linecap:round;
+ stroke-linejoin:round;
+}
+#main[data-chapter="1"] .enhanced-possibility .typology-select-shell #typology-select{
+ padding-right:52px!important;
+}
+@media (max-width:800px){
+ #main[data-chapter="1"] .enhanced-possibility .typology-select-chevron{
+   width:30px;
+   height:30px;
+   right:8px;
+ }
+}
 </style>
 </body></html>
